@@ -1199,6 +1199,13 @@ func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[st
 	if required {
 		tagRequired = append(tagRequired, fieldName)
 	}
+	
+	if field.Tag != nil {
+		desc, ok := reflect.StructTag(strings.ReplaceAll(field.Tag.Value, "`", "")).Lookup("trans")
+		if ok && desc != "" {
+			schema.Description = desc
+		}
+	}
 
 	return map[string]spec.Schema{fieldName: *schema}, tagRequired, nil
 }
