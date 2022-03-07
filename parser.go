@@ -1211,8 +1211,6 @@ func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[st
 		if ok && desc != "" {
 			schema.Description = desc
 		}
-
-
 	}
 
 	return map[string]spec.Schema{fieldName: *schema}, tagRequired, nil
