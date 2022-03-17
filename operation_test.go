@@ -1882,6 +1882,54 @@ func TestParseParamCommentByExampleUnsupportedType(t *testing.T) {
 	assert.Equal(t, param.Example, float64(10))
 }
 
+func TestParseParamCommentBySchemaExampleString(t *testing.T) {
+	t.Parallel()
+
+	comment := `@Param some_id body string true "Some ID" SchemaExample(True feelings)`
+	operation := NewOperation(nil)
+	err := operation.ParseComment(comment, nil)
+
+	assert.NoError(t, err)
+	b, _ := json.MarshalIndent(operation.Parameters, "", "    ")
+	expected := `[
+    {
+        "description": "Some ID",
+        "name": "some_id",
+        "in": "body",
+        "required": true,
+        "schema": {
+            "type": "string",
+            "example": "True feelings"
+        }
+    }
+]`
+	assert.Equal(t, expected, string(b))
+}
+
+func TestParseParamCommentBySchemaExampleUnsupportedType(t *testing.T) {
+	t.Parallel()
+	var param spec.Parameter
+
+	setSchemaExample(&param, "something", "random value")
+	assert.Nil(t, param.Schema)
+
+	setSchemaExample(&param, STRING, "string value")
+	assert.Nil(t, param.Schema)
+
+	param.Schema = &spec.Schema{}
+	setSchemaExample(&param, STRING, "string value")
+	assert.Equal(t, "string value", param.Schema.Example)
+
+	setSchemaExample(&param, INTEGER, "10")
+	assert.Equal(t, 10, param.Schema.Example)
+
+	setSchemaExample(&param, NUMBER, "10")
+	assert.Equal(t, float64(10), param.Schema.Example)
+
+	setSchemaExample(&param, STRING, "string \\r\\nvalue")
+	assert.Equal(t, "string \r\nvalue", param.Schema.Example)
+}
+
 func TestParseParamArrayWithEnums(t *testing.T) {
 	t.Parallel()
 
@@ -2032,6 +2080,39 @@ func TestParseSecurityComment(t *testing.T) {
 	assert.Equal(t, operation.Security, []map[string][]string{
 		{
 			"OAuth2Implicit": {"read", "write"},
+		},
+	})
+}
+
+func TestParseSecurityCommentSimple(t *testing.T) {
+	t.Parallel()
+
+	comment := `@Security ApiKeyAuth`
+	operation := NewOperation(nil)
+
+	err := operation.ParseComment(comment, nil)
+	assert.NoError(t, err)
+
+	assert.Equal(t, operation.Security, []map[string][]string{
+		{
+			"ApiKeyAuth": {},
+		},
+	})
+}
+
+func TestParseSecurityCommentOr(t *testing.T) {
+	t.Parallel()
+
+	comment := `@Security OAuth2Implicit[read, write] || Firebase[]`
+	operation := NewOperation(nil)
+
+	err := operation.ParseComment(comment, nil)
+	assert.NoError(t, err)
+
+	assert.Equal(t, operation.Security, []map[string][]string{
+		{
+			"OAuth2Implicit": {"read", "write"},
+			"Firebase":       {""},
 		},
 	})
 }
