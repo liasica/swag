@@ -352,7 +352,7 @@ func (ps *tagBaseFieldParser) ComplementSchema(schema *spec.Schema) error {
 
 	schema.ReadOnly = ps.tag.Get(readOnlyTag) == "true"
 
-	if !reflect.ValueOf(schema.Ref).IsZero() && schema.ReadOnly {
+	if !reflect.ValueOf(schema.Ref).IsZero() {
 		schema.AllOf = []spec.Schema{*spec.RefSchema(schema.Ref.String())}
 		schema.Ref = spec.Ref{
 			Ref: jsonreference.Ref{
