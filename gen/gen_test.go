@@ -642,6 +642,20 @@ func TestGen_parseOverrides(t *testing.T) {
 			},
 		},
 		{
+			Name: "generic-simple",
+			Data: `replace types.Field[string] string`,
+			Expected: map[string]string{
+				"types.Field[string]": "string",
+			},
+		},
+		{
+			Name: "generic-double",
+			Data: `replace types.Field[string,string] string`,
+			Expected: map[string]string{
+				"types.Field[string,string]": "string",
+			},
+		},
+		{
 			Name: "comment",
 			Data: `// this is a comment
 			replace foo bar`,
@@ -778,4 +792,46 @@ func TestGen_Debugger(t *testing.T) {
 
 		_ = os.Remove(expectedFile)
 	}
+}
+
+func TestGen_ErrorAndInterface(t *testing.T) {
+	config := &Config{
+		SearchDir:          "../testdata/error",
+		MainAPIFile:        "./main.go",
+		OutputDir:          "../testdata/error/docs",
+		OutputTypes:        outputTypes,
+		PropNamingStrategy: "",
+	}
+
+	assert.NoError(t, New().Build(config))
+
+	expectedFiles := []string{
+		filepath.Join(config.OutputDir, "docs.go"),
+		filepath.Join(config.OutputDir, "swagger.json"),
+		filepath.Join(config.OutputDir, "swagger.yaml"),
+	}
+	t.Cleanup(func() {
+		for _, expectedFile := range expectedFiles {
+			_ = os.Remove(expectedFile)
+		}
+	})
+
+	// check files
+	for _, expectedFile := range expectedFiles {
+		if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+			require.NoError(t, err)
+		}
+	}
+
+	// check content
+	jsonOutput, err := ioutil.ReadFile(filepath.Join(config.OutputDir, "swagger.json"))
+	if err != nil {
+		require.NoError(t, err)
+	}
+	expectedJSON, err := ioutil.ReadFile(filepath.Join(config.SearchDir, "expected.json"))
+	if err != nil {
+		require.NoError(t, err)
+	}
+
+	assert.JSONEq(t, string(expectedJSON), string(jsonOutput))
 }

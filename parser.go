@@ -130,6 +130,9 @@ type Parser struct {
 	// Strict whether swag should error or warn when it detects cases which are most likely user errors
 	Strict bool
 
+	// RequiredByDefault set validation required for all fields by default
+	RequiredByDefault bool
+
 	// structStack stores full names of the structures that were already parsed or are being parsed now
 	structStack []*TypeSpecDef
 
@@ -868,6 +871,14 @@ func convertFromSpecificToPrimitive(typeName string) (string, error) {
 }
 
 func (parser *Parser) getTypeSchema(typeName string, file *ast.File, ref bool) (*spec.Schema, error) {
+	if override, ok := parser.Overrides[typeName]; ok {
+		parser.debug.Printf("Override detected for %s: using %s instead", typeName, override)
+		typeName = override
+	}
+
+	if IsInterfaceLike(typeName) {
+		return &spec.Schema{}, nil
+	}
 	if IsGolangPrimitiveType(typeName) {
 		return PrimitiveSchema(TransToValidSchemeType(typeName)), nil
 	}
@@ -1005,7 +1016,12 @@ func (parser *Parser) isInStructStack(typeSpecDef *TypeSpecDef) bool {
 // with a schema for the given type
 func (parser *Parser) ParseDefinition(typeSpecDef *TypeSpecDef) (*Schema, error) {
 	typeName := typeSpecDef.FullName()
-	refTypeName := TypeDocName(typeName, typeSpecDef.TypeSpec)
+	var refTypeName string
+	if fn, ok := (typeSpecDef.ParentSpec).(*ast.FuncDecl); ok {
+		refTypeName = TypeDocNameFuncScoped(typeName, typeSpecDef.TypeSpec, fn.Name.Name)
+	} else {
+		refTypeName = TypeDocName(typeName, typeSpecDef.TypeSpec)
+	}
 
 	schema, found := parser.parsedSchemas[typeSpecDef]
 	if found {
@@ -1055,8 +1071,16 @@ func (parser *Parser) ParseDefinition(typeSpecDef *TypeSpecDef) (*Schema, error)
 }
 
 func fullTypeName(pkgName, typeName string) string {
-	if pkgName != "" {
+	if pkgName != "" && !ignoreNameOverride(typeName) {
 		return pkgName + "." + typeName
+	}
+
+	return typeName
+}
+
+func fullTypeNameFunctionScoped(pkgName, fnName, typeName string) string {
+	if pkgName != "" {
+		return pkgName + "." + fnName + "." + typeName
 	}
 
 	return typeName
@@ -1220,7 +1244,7 @@ func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[st
 			}
 		}
 
-		typeName, err := getFieldType(field.Type)
+		typeName, err := getFieldType(file, field.Type)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1264,7 +1288,7 @@ func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[st
 	}
 
 	if schema == nil {
-		typeName, err := getFieldType(field.Type)
+		typeName, err := getFieldType(file, field.Type)
 		if err == nil {
 			// named type
 			schema, err = parser.getTypeSchema(typeName, file, true)
@@ -1304,26 +1328,26 @@ func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[st
 	return map[string]spec.Schema{fieldName: *schema}, tagRequired, nil
 }
 
-func getFieldType(field ast.Expr) (string, error) {
+func getFieldType(file *ast.File, field ast.Expr) (string, error) {
 	switch fieldType := field.(type) {
 	case *ast.Ident:
 		return fieldType.Name, nil
 	case *ast.SelectorExpr:
-		packageName, err := getFieldType(fieldType.X)
+		packageName, err := getFieldType(file, fieldType.X)
 		if err != nil {
 			return "", err
 		}
 
 		return fullTypeName(packageName, fieldType.Sel.Name), nil
 	case *ast.StarExpr:
-		fullName, err := getFieldType(fieldType.X)
+		fullName, err := getFieldType(file, fieldType.X)
 		if err != nil {
 			return "", err
 		}
 
 		return fullName, nil
 	default:
-		return "", fmt.Errorf("unknown field type %#v", field)
+		return getGenericFieldType(file, field)
 	}
 }
 
@@ -1434,7 +1458,6 @@ func defineTypeOfExample(schemaType, arrayType, exampleValue string) (interface{
 				result[mapData[0]] = v
 
 				continue
-
 			}
 
 			return nil, fmt.Errorf("example value %s should format: key:value", exampleValue)
@@ -1569,7 +1592,7 @@ func walkWith(excludes map[string]struct{}, parseVendor bool) func(path string, 
 		if f.IsDir() {
 			if !parseVendor && f.Name() == "vendor" || // ignore "vendor"
 				f.Name() == "docs" || // exclude docs
-				len(f.Name()) > 1 && f.Name()[0] == '.' { // exclude all hidden folder
+				len(f.Name()) > 1 && f.Name()[0] == '.' && f.Name() != ".." { // exclude all hidden folder
 				return filepath.SkipDir
 			}
 

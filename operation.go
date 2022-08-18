@@ -213,7 +213,7 @@ func (operation *Operation) ParseMetadata(attribute, lowerAttribute, lineRemaind
 	return nil
 }
 
-var paramPattern = regexp.MustCompile(`(\S+)\s+(\w+)\s+([\S.]+)\s+(\w+)\s+"([^"]+)"`)
+var paramPattern = regexp.MustCompile(`(\S+)\s+(\w+)\s+([\S. ]+?)\s+(\w+)\s+"([^"]+)"`)
 
 func findInSlice(arr []string, target string) bool {
 	for _, str := range arr {
@@ -385,7 +385,7 @@ func (operation *Operation) ParseParamComment(commentLine string, astFile *ast.F
 		if objectType == PRIMITIVE {
 			param.Schema = PrimitiveSchema(refType)
 		} else {
-			schema, err := operation.parseAPIObjectSchema(objectType, refType, astFile)
+			schema, err := operation.parseAPIObjectSchema(commentLine, objectType, refType, astFile)
 			if err != nil {
 				return err
 			}
@@ -818,7 +818,7 @@ func findTypeDef(importPath, typeName string) (*ast.TypeSpec, error) {
 	return nil, fmt.Errorf("type spec not found")
 }
 
-var responsePattern = regexp.MustCompile(`^([\w,]+)\s+([\w{}]+)\s+([\w\-.\\{}=,\[\]]+)[^"]*(.*)?`)
+var responsePattern = regexp.MustCompile(`^([\w,]+)\s+([\w{}]+)\s+([\w\-.\\{}=,\[\s\]]+)\s*(".*)?`)
 
 // ResponseType{data1=Type1,data2=Type2}.
 var combinedPattern = regexp.MustCompile(`^([\w\-./\[\]]+){(.*)}$`)
@@ -933,7 +933,16 @@ func (operation *Operation) parseCombinedObjectSchema(refType string, astFile *a
 	}), nil
 }
 
-func (operation *Operation) parseAPIObjectSchema(schemaType, refType string, astFile *ast.File) (*spec.Schema, error) {
+func (operation *Operation) parseAPIObjectSchema(commentLine, schemaType, refType string, astFile *ast.File) (*spec.Schema, error) {
+	if strings.HasSuffix(refType, ",") && strings.Contains(refType, "[") {
+		// regexp may have broken generics syntax. find closing bracket and add it back
+		allMatchesLenOffset := strings.Index(commentLine, refType) + len(refType)
+		lostPartEndIdx := strings.Index(commentLine[allMatchesLenOffset:], "]")
+		if lostPartEndIdx >= 0 {
+			refType += commentLine[allMatchesLenOffset : allMatchesLenOffset+lostPartEndIdx+1]
+		}
+	}
+
 	switch schemaType {
 	case OBJECT:
 		if !strings.HasPrefix(refType, "[]") {
@@ -969,7 +978,7 @@ func (operation *Operation) ParseResponseComment(commentLine string, astFile *as
 
 	description := strings.Trim(matches[4], "\"")
 
-	schema, err := operation.parseAPIObjectSchema(strings.Trim(matches[2], "{}"), matches[3], astFile)
+	schema, err := operation.parseAPIObjectSchema(commentLine, strings.Trim(matches[2], "{}"), strings.TrimSpace(matches[3]), astFile)
 	if err != nil {
 		return err
 	}
@@ -1034,7 +1043,7 @@ func (operation *Operation) ParseResponseHeaderComment(commentLine string, _ *as
 
 	header := newHeaderSpec(strings.Trim(matches[2], "{}"), strings.Trim(matches[4], "\""))
 
-	headerKey := matches[3]
+	headerKey := strings.TrimSpace(matches[3])
 
 	if strings.EqualFold(matches[1], "all") {
 		if operation.Responses.Default != nil {
@@ -1121,7 +1130,7 @@ func (operation *Operation) ParseEmptyResponseOnly(commentLine string) error {
 			return fmt.Errorf("can not parse response comment \"%s\"", commentLine)
 		}
 
-		operation.AddResponse(code, spec.NewResponse())
+		operation.AddResponse(code, spec.NewResponse().WithDescription(http.StatusText(code)))
 	}
 
 	return nil

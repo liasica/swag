@@ -142,6 +142,15 @@ func TestIsNumericType(t *testing.T) {
 	assert.Equal(t, IsNumericType(STRING), false)
 }
 
+func TestIsInterfaceLike(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, IsInterfaceLike(ERROR), true)
+	assert.Equal(t, IsInterfaceLike(ANY), true)
+
+	assert.Equal(t, IsInterfaceLike(STRING), false)
+}
+
 func TestTypeDocName(t *testing.T) {
 	t.Parallel()
 
@@ -157,4 +166,41 @@ func TestTypeDocName(t *testing.T) {
 			List: []*ast.Comment{{Text: "// @name Model"}},
 		},
 	}))
+
+	expected = "package.ModelName"
+	assert.Equal(t, expected, TypeDocName("$package.ModelName", &ast.TypeSpec{Name: &ast.Ident{Name: "Model"}}))
+
+	expected = "Model"
+	assert.Equal(t, expected, TypeDocName("$Model", &ast.TypeSpec{
+		Comment: &ast.CommentGroup{
+			List: []*ast.Comment{{Text: "// @name ModelName"}},
+		},
+	}))
+}
+
+func TestTypeDocNameFuncScoped(t *testing.T) {
+	t.Parallel()
+
+	expected := "a/package"
+	assert.Equal(t, expected, TypeDocNameFuncScoped(expected, nil, "FnName"))
+
+	expected = "package.FnName.Model"
+	assert.Equal(t, expected, TypeDocNameFuncScoped("package", &ast.TypeSpec{Name: &ast.Ident{Name: "Model"}}, "FnName"))
+
+	expected = "Model"
+	assert.Equal(t, expected, TypeDocNameFuncScoped("package", &ast.TypeSpec{
+		Comment: &ast.CommentGroup{
+			List: []*ast.Comment{{Text: "// @name Model"}},
+		},
+	}, "FnName"))
+
+	expected = "package.FnName.ModelName"
+	assert.Equal(t, expected, TypeDocNameFuncScoped("$package.FnName.ModelName", &ast.TypeSpec{Name: &ast.Ident{Name: "Model"}}, "FnName"))
+
+	expected = "Model"
+	assert.Equal(t, expected, TypeDocNameFuncScoped("$Model", &ast.TypeSpec{
+		Comment: &ast.CommentGroup{
+			List: []*ast.Comment{{Text: "// @name ModelName"}},
+		},
+	}, "FnName"))
 }
