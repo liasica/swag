@@ -1316,6 +1316,10 @@ func (parser *Parser) parseStruct(file *ast.File, fields *ast.FieldList) (*spec.
 
 func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[string]spec.Schema, []string, error) {
 	if field.Tag != nil {
+		// 跳过param
+		if _, isPath := reflect.StructTag(strings.ReplaceAll(field.Tag.Value, "`", "")).Lookup("param"); isPath {
+			return nil, nil, nil
+		}
 		skip, ok := reflect.StructTag(strings.ReplaceAll(field.Tag.Value, "`", "")).Lookup("swaggerignore")
 		if ok && strings.EqualFold(skip, "true") {
 			return nil, nil, nil
@@ -1402,6 +1406,12 @@ func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[st
 			schema.Extensions = make(spec.Extensions)
 		}
 		schema.Extensions[formTag] = formName
+		if field.Tag != nil {
+			desc, ok := reflect.StructTag(strings.ReplaceAll(field.Tag.Value, "`", "")).Lookup("trans")
+			if ok && desc != "" {
+				schema.Description = desc + " " + schema.Description
+			}
+		}
 	}
 
 	return map[string]spec.Schema{fieldName: *schema}, tagRequired, nil

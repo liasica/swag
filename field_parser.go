@@ -10,6 +10,7 @@ import (
 	"sync"
 	"unicode"
 
+	"github.com/go-openapi/jsonreference"
 	"github.com/go-openapi/spec"
 )
 
@@ -386,6 +387,19 @@ func (ps *tagBaseFieldParser) complementSchema(schema *spec.Schema, types []stri
 	}
 
 	schema.ReadOnly = ps.tag.Get(readOnlyTag) == "true"
+
+	if !reflect.ValueOf(schema.Ref).IsZero() {
+		schema.AllOf = []spec.Schema{*spec.RefSchema(schema.Ref.String())}
+		schema.Ref = spec.Ref{
+			Ref: jsonreference.Ref{
+				HasFullURL:      false,
+				HasURLPathOnly:  false,
+				HasFragmentOnly: false,
+				HasFileScheme:   false,
+				HasFullFilePath: false,
+			},
+		} // clear out existing ref
+	}
 
 	defaultTagValue := ps.tag.Get(defaultTag)
 	if defaultTagValue != "" {
