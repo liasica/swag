@@ -1,6 +1,7 @@
 package format
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -98,10 +99,18 @@ func (f *Format) format(path string) error {
 	if err != nil {
 		return err
 	}
+	if bytes.Equal(contents, formatted) {
+		// Skip write if no change
+		return nil
+	}
 	return write(path, formatted)
 }
 
 func write(path string, contents []byte) error {
+	originalFileInfo, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
 	f, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path))
 	if err != nil {
 		return err
@@ -111,6 +120,9 @@ func write(path string, contents []byte) error {
 		return err
 	}
 	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(f.Name(), originalFileInfo.Mode()); err != nil {
 		return err
 	}
 	return os.Rename(f.Name(), path)

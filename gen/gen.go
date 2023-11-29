@@ -103,8 +103,8 @@ type Config struct {
 	// ParseVendor whether swag should be parse vendor folder
 	ParseVendor bool
 
-	// ParseDependencies whether swag should be parse outside dependency folder
-	ParseDependency bool
+	// ParseDependencies whether swag should be parse outside dependency folder: 0 none, 1 models, 2 operations, 3 all
+	ParseDependency int
 
 	// ParseInternal whether swag should parse internal packages
 	ParseInternal bool
@@ -138,6 +138,9 @@ type Config struct {
 
 	// CollectionFormat set default collection format
 	CollectionFormat string
+
+	// Parse only packages whose import path match the given prefix, comma separated
+	PackagePrefix string
 }
 
 // Build builds swagger json file  for given searchDir and mainAPIFile. Returns json.
@@ -197,6 +200,7 @@ func (g *Gen) Build(config *Config) error {
 		swag.ParseUsingGoList(config.ParseGoList),
 		swag.SetTags(config.Tags),
 		swag.SetCollectionFormat(config.CollectionFormat),
+		swag.SetPackagePrefix(config.PackagePrefix),
 	)
 
 	p.PropNamingStrategy = config.PropNamingStrategy

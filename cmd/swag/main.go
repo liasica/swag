@@ -15,29 +15,31 @@ import (
 )
 
 const (
-	searchDirFlag         = "dir"
-	excludeFlag           = "exclude"
-	generalInfoFlag       = "generalInfo"
-	propertyStrategyFlag  = "propertyStrategy"
-	outputFlag            = "output"
-	outputTypesFlag       = "outputTypes"
-	parseVendorFlag       = "parseVendor"
-	parseDependencyFlag   = "parseDependency"
-	markdownFilesFlag     = "markdownFiles"
-	codeExampleFilesFlag  = "codeExampleFiles"
-	parseInternalFlag     = "parseInternal"
-	generatedTimeFlag     = "generatedTime"
-	requiredByDefaultFlag = "requiredByDefault"
-	parseDepthFlag        = "parseDepth"
-	instanceNameFlag      = "instanceName"
-	overridesFileFlag     = "overridesFile"
-	parseGoListFlag       = "parseGoList"
-	quietFlag             = "quiet"
-	tagsFlag              = "tags"
-	parseExtensionFlag    = "parseExtension"
-	templateDelimsFlag    = "templateDelims"
-	packageName           = "packageName"
-	collectionFormatFlag  = "collectionFormat"
+	searchDirFlag            = "dir"
+	excludeFlag              = "exclude"
+	generalInfoFlag          = "generalInfo"
+	propertyStrategyFlag     = "propertyStrategy"
+	outputFlag               = "output"
+	outputTypesFlag          = "outputTypes"
+	parseVendorFlag          = "parseVendor"
+	parseDependencyFlag      = "parseDependency"
+	parseDependencyLevelFlag = "parseDependencyLevel"
+	markdownFilesFlag        = "markdownFiles"
+	codeExampleFilesFlag     = "codeExampleFiles"
+	parseInternalFlag        = "parseInternal"
+	generatedTimeFlag        = "generatedTime"
+	requiredByDefaultFlag    = "requiredByDefault"
+	parseDepthFlag           = "parseDepth"
+	instanceNameFlag         = "instanceName"
+	overridesFileFlag        = "overridesFile"
+	parseGoListFlag          = "parseGoList"
+	quietFlag                = "quiet"
+	tagsFlag                 = "tags"
+	parseExtensionFlag       = "parseExtension"
+	templateDelimsFlag       = "templateDelims"
+	packageName              = "packageName"
+	collectionFormatFlag     = "collectionFormat"
+	packagePrefixFlag        = "packagePrefix"
 )
 
 var initFlags = []cli.Flag{
@@ -83,6 +85,11 @@ var initFlags = []cli.Flag{
 	&cli.BoolFlag{
 		Name:  parseVendorFlag,
 		Usage: "Parse go files in 'vendor' folder, disabled by default",
+	},
+	&cli.IntFlag{
+		Name:    parseDependencyLevelFlag,
+		Aliases: []string{"pdl"},
+		Usage:   "Parse go files inside dependency folder, 0 disabled, 1 only parse models, 2 only parse operations, 3 parse all",
 	},
 	&cli.BoolFlag{
 		Name:    parseDependencyFlag,
@@ -161,6 +168,11 @@ var initFlags = []cli.Flag{
 		Value:   "csv",
 		Usage:   "Set default collection format",
 	},
+	&cli.StringFlag{
+		Name:  packagePrefixFlag,
+		Value: "",
+		Usage: "Parse only packages whose import path match the given prefix, comma separated",
+	},
 }
 
 func initAction(ctx *cli.Context) error {
@@ -198,6 +210,12 @@ func initAction(ctx *cli.Context) error {
 		return fmt.Errorf("not supported %s collectionFormat", ctx.String(collectionFormat))
 	}
 
+	var pdv = ctx.Int(parseDependencyLevelFlag)
+	if pdv == 0 {
+		if ctx.Bool(parseDependencyFlag) {
+			pdv = 1
+		}
+	}
 	return gen.New().Build(&gen.Config{
 		SearchDir:           ctx.String(searchDirFlag),
 		Excludes:            ctx.String(excludeFlag),
@@ -207,7 +225,7 @@ func initAction(ctx *cli.Context) error {
 		OutputDir:           ctx.String(outputFlag),
 		OutputTypes:         outputTypes,
 		ParseVendor:         ctx.Bool(parseVendorFlag),
-		ParseDependency:     ctx.Bool(parseDependencyFlag),
+		ParseDependency:     pdv,
 		MarkdownFilesDir:    ctx.String(markdownFilesFlag),
 		ParseInternal:       ctx.Bool(parseInternalFlag),
 		GeneratedTime:       ctx.Bool(generatedTimeFlag),
@@ -223,6 +241,7 @@ func initAction(ctx *cli.Context) error {
 		PackageName:         ctx.String(packageName),
 		Debugger:            logger,
 		CollectionFormat:    collectionFormat,
+		PackagePrefix:       ctx.String(packagePrefixFlag),
 	})
 }
 

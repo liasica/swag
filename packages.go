@@ -19,7 +19,7 @@ type PackagesDefinitions struct {
 	files             map[*ast.File]*AstFileInfo
 	packages          map[string]*PackageDefinitions
 	uniqueDefinitions map[string]*TypeSpecDef
-	parseDependency   bool
+	parseDependency   ParseFlag
 	debug             Debugger
 }
 
@@ -324,7 +324,7 @@ func (pkgDefs *PackagesDefinitions) EvaluateConstValueByName(file *ast.File, pkg
 			}
 		}
 	}
-	if pkgDefs.parseDependency {
+	if pkgDefs.parseDependency > 0 {
 		for _, pkgPath := range externalPkgPaths {
 			if err := pkgDefs.loadExternalPackage(pkgPath); err == nil {
 				if pkg, ok := pkgDefs.packages[pkgPath]; ok {
@@ -506,14 +506,7 @@ func (pkgDefs *PackagesDefinitions) findPackagePathFromImports(pkg string, file 
 }
 
 func (pkgDefs *PackagesDefinitions) findTypeSpecFromPackagePaths(matchedPkgPaths, externalPkgPaths []string, name string) (typeDef *TypeSpecDef) {
-	for _, pkgPath := range matchedPkgPaths {
-		typeDef = pkgDefs.findTypeSpec(pkgPath, name)
-		if typeDef != nil {
-			return typeDef
-		}
-	}
-
-	if pkgDefs.parseDependency {
+	if pkgDefs.parseDependency > 0 {
 		for _, pkgPath := range externalPkgPaths {
 			if err := pkgDefs.loadExternalPackage(pkgPath); err == nil {
 				typeDef = pkgDefs.findTypeSpec(pkgPath, name)
@@ -521,6 +514,13 @@ func (pkgDefs *PackagesDefinitions) findTypeSpecFromPackagePaths(matchedPkgPaths
 					return typeDef
 				}
 			}
+		}
+	}
+
+	for _, pkgPath := range matchedPkgPaths {
+		typeDef = pkgDefs.findTypeSpec(pkgPath, name)
+		if typeDef != nil {
+			return typeDef
 		}
 	}
 
@@ -542,13 +542,14 @@ func (pkgDefs *PackagesDefinitions) FindTypeSpec(typeName string, file *ast.File
 
 	parts := strings.Split(strings.Split(typeName, "[")[0], ".")
 	if len(parts) > 1 {
-		typeDef, ok := pkgDefs.uniqueDefinitions[typeName]
-		if ok {
-			return typeDef
-		}
-
 		pkgPaths, externalPkgPaths := pkgDefs.findPackagePathFromImports(parts[0], file)
-		typeDef = pkgDefs.findTypeSpecFromPackagePaths(pkgPaths, externalPkgPaths, parts[1])
+		if len(externalPkgPaths) == 0 || pkgDefs.parseDependency == ParseNone {
+			typeDef, ok := pkgDefs.uniqueDefinitions[typeName]
+			if ok {
+				return typeDef
+			}
+		}
+		typeDef := pkgDefs.findTypeSpecFromPackagePaths(pkgPaths, externalPkgPaths, parts[1])
 		return pkgDefs.parametrizeGenericType(file, typeDef, typeName)
 	}
 
