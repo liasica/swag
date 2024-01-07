@@ -30,6 +30,7 @@ type Operation struct {
 	codeExampleFilesDir string
 	spec.Operation
 	RouterProperties []RouteProperties
+	State            string
 }
 
 var mimeTypeAliases = map[string]string{
@@ -118,6 +119,8 @@ func (operation *Operation) ParseComment(comment string, astFile *ast.File) erro
 		lineRemainder = fields[1]
 	}
 	switch lowerAttribute {
+	case stateAttr:
+		operation.ParseStateComment(lineRemainder)
 	case descriptionAttr:
 		operation.ParseDescriptionComment(lineRemainder)
 	case descriptionMarkdownAttr:
@@ -158,7 +161,7 @@ func (operation *Operation) ParseComment(comment string, astFile *ast.File) erro
 	return nil
 }
 
-// ParseCodeSample godoc.
+// ParseCodeSample parse code sample.
 func (operation *Operation) ParseCodeSample(attribute, _, lineRemainder string) error {
 	if lineRemainder == "file" {
 		data, err := getCodeExampleForSummary(operation.Summary, operation.codeExampleFilesDir)
@@ -183,7 +186,12 @@ func (operation *Operation) ParseCodeSample(attribute, _, lineRemainder string) 
 	return operation.ParseMetadata(attribute, strings.ToLower(attribute), lineRemainder)
 }
 
-// ParseDescriptionComment godoc.
+// ParseStateComment parse state comment.
+func (operation *Operation) ParseStateComment(lineRemainder string) {
+	operation.State = lineRemainder
+}
+
+// ParseDescriptionComment parse description comment.
 func (operation *Operation) ParseDescriptionComment(lineRemainder string) {
 	if operation.Description == "" {
 		operation.Description = lineRemainder
@@ -194,7 +202,7 @@ func (operation *Operation) ParseDescriptionComment(lineRemainder string) {
 	operation.Description += "\n" + lineRemainder
 }
 
-// ParseMetadata godoc.
+// ParseMetadata parse metadata.
 func (operation *Operation) ParseMetadata(attribute, lowerAttribute, lineRemainder string) error {
 	// parsing specific meta data extensions
 	if strings.HasPrefix(lowerAttribute, "@x-") {
