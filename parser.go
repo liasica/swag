@@ -189,6 +189,8 @@ type FieldParser interface {
 	ShouldSkip() bool
 	FieldName() (string, error)
 	FormName() string
+	HeaderName() string
+	PathName() string
 	CustomSchema() (*spec.Schema, error)
 	ComplementSchema(schema *spec.Schema) error
 	IsRequired() (bool, error)
@@ -509,7 +511,7 @@ func (parser *Parser) ParseGeneralAPIInfo(mainAPIFile string) error {
 
 func parseGeneralAPIInfo(parser *Parser, comments []string) error {
 	previousAttribute := ""
-
+	var tag *spec.Tag
 	// parsing classic meta data model
 	for line := 0; line < len(comments); line++ {
 		commentLine := comments[line]
@@ -570,42 +572,43 @@ func parseGeneralAPIInfo(parser *Parser, comments []string) error {
 		case "@schemes":
 			parser.swagger.Schemes = strings.Split(value, " ")
 		case "@tag.name":
-			parser.swagger.Tags = append(parser.swagger.Tags, spec.Tag{
-				TagProps: spec.TagProps{
-					Name: value,
-				},
-			})
+			if parser.matchTag(value) {
+				parser.swagger.Tags = append(parser.swagger.Tags, spec.Tag{
+					TagProps: spec.TagProps{
+						Name: value,
+					},
+				})
+				tag = &parser.swagger.Tags[len(parser.swagger.Tags)-1]
+			} else {
+				tag = nil
+			}
 		case "@tag.description":
-			tag := parser.swagger.Tags[len(parser.swagger.Tags)-1]
-			tag.TagProps.Description = value
-			replaceLastTag(parser.swagger.Tags, tag)
+			if tag != nil {
+				tag.TagProps.Description = value
+			}
 		case "@tag.description.markdown":
-			tag := parser.swagger.Tags[len(parser.swagger.Tags)-1]
+			if tag != nil {
+				commentInfo, err := getMarkdownForTag(tag.TagProps.Name, parser.markdownFileDir)
+				if err != nil {
+					return err
+				}
 
-			commentInfo, err := getMarkdownForTag(tag.TagProps.Name, parser.markdownFileDir)
-			if err != nil {
-				return err
+				tag.TagProps.Description = string(commentInfo)
 			}
-
-			tag.TagProps.Description = string(commentInfo)
-			replaceLastTag(parser.swagger.Tags, tag)
 		case "@tag.docs.url":
-			tag := parser.swagger.Tags[len(parser.swagger.Tags)-1]
-			tag.TagProps.ExternalDocs = &spec.ExternalDocumentation{
-				URL:         value,
-				Description: "",
+			if tag != nil {
+				tag.TagProps.ExternalDocs = &spec.ExternalDocumentation{
+					URL: value,
+				}
 			}
-
-			replaceLastTag(parser.swagger.Tags, tag)
 		case "@tag.docs.description":
-			tag := parser.swagger.Tags[len(parser.swagger.Tags)-1]
-			if tag.TagProps.ExternalDocs == nil {
-				return fmt.Errorf("%s needs to come after a @tags.docs.url", attribute)
+			if tag != nil {
+				if tag.TagProps.ExternalDocs == nil {
+					return fmt.Errorf("%s needs to come after a @tags.docs.url", attribute)
+				}
+
+				tag.TagProps.ExternalDocs.Description = value
 			}
-
-			tag.TagProps.ExternalDocs.Description = value
-			replaceLastTag(parser.swagger.Tags, tag)
-
 		case secBasicAttr, secAPIKeyAttr, secApplicationAttr, secImplicitAttr, secPasswordAttr, secAccessCodeAttr:
 			scheme, err := parseSecAttributes(attribute, comments, &line)
 			if err != nil {
@@ -735,6 +738,7 @@ func parseSecAttributes(context string, lines []string, index *int) (*spec.Secur
 	attrMap, scopes := make(map[string]string), make(map[string]string)
 	extensions, description := make(map[string]interface{}), ""
 
+loopline:
 	for ; *index < len(lines); *index++ {
 		v := strings.TrimSpace(lines[*index])
 		if len(v) == 0 {
@@ -751,23 +755,21 @@ func parseSecAttributes(context string, lines []string, index *int) (*spec.Secur
 		for _, findterm := range search {
 			if securityAttr == findterm {
 				attrMap[securityAttr] = value
-
-				break
+				continue loopline
 			}
 		}
 
-		isExists, err := isExistsScope(securityAttr)
-		if err != nil {
+		if isExists, err := isExistsScope(securityAttr); err != nil {
 			return nil, err
-		}
-
-		if isExists {
-			scopes[securityAttr[len(scopeAttrPrefix):]] = v[len(securityAttr):]
+		} else if isExists {
+			scopes[securityAttr[len(scopeAttrPrefix):]] = value
+			continue
 		}
 
 		if strings.HasPrefix(securityAttr, "@x-") {
 			// Add the custom attribute without the @
 			extensions[securityAttr[1:]] = value
+			continue
 		}
 
 		// Not mandatory field
@@ -914,14 +916,14 @@ func getMarkdownForTag(tagName string, dirPath string) ([]byte, error) {
 func isExistsScope(scope string) (bool, error) {
 	s := strings.Fields(scope)
 	for _, v := range s {
-		if strings.Contains(v, scopeAttrPrefix) {
+		if strings.HasPrefix(v, scopeAttrPrefix) {
 			if strings.Contains(v, ",") {
 				return false, fmt.Errorf("@scope can't use comma(,) get=" + v)
 			}
 		}
 	}
 
-	return strings.Contains(scope, scopeAttrPrefix), nil
+	return strings.HasPrefix(scope, scopeAttrPrefix), nil
 }
 
 func getTagsFromComment(comment string) (tags []string) {
@@ -940,6 +942,27 @@ func getTagsFromComment(comment string) (tags []string) {
 	}
 	return
 
+}
+
+func (parser *Parser) matchTag(tag string) bool {
+	if len(parser.tags) == 0 {
+		return true
+	}
+
+	if _, has := parser.tags["!"+tag]; has {
+		return false
+	}
+	if _, has := parser.tags[tag]; has {
+		return true
+	}
+
+	// If all tags are negation then we should return true
+	for key := range parser.tags {
+		if key[0] != '!' {
+			return false
+		}
+	}
+	return true
 }
 
 func (parser *Parser) matchTags(comments []*ast.Comment) (match bool) {
@@ -1282,6 +1305,9 @@ func fullTypeName(parts ...string) string {
 // fillDefinitionDescription additionally fills fields in definition (spec.Schema)
 // TODO: If .go file contains many types, it may work for a long time
 func fillDefinitionDescription(definition *spec.Schema, file *ast.File, typeSpecDef *TypeSpecDef) {
+	if file == nil {
+		return
+	}
 	for _, astDeclaration := range file.Decls {
 		generalDeclaration, ok := astDeclaration.(*ast.GenDecl)
 		if !ok || generalDeclaration.Tok != token.TYPE {
@@ -1510,6 +1536,9 @@ func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[st
 		tagRequired = append(tagRequired, fieldName)
 	}
 
+	if schema.Extensions == nil {
+		schema.Extensions = make(spec.Extensions)
+	}
 	if formName := ps.FormName(); len(formName) > 0 {
 		if schema.Extensions == nil {
 			schema.Extensions = make(spec.Extensions)
@@ -1521,6 +1550,13 @@ func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[st
 				schema.Description = desc + " " + schema.Description
 			}
 		}
+		schema.Extensions["formData"] = formName
+	}
+	if headerName := ps.HeaderName(); len(headerName) > 0 {
+		schema.Extensions["header"] = headerName
+	}
+	if pathName := ps.PathName(); len(pathName) > 0 {
+		schema.Extensions["path"] = pathName
 	}
 
 	return map[string]spec.Schema{fieldName: *schema}, tagRequired, nil
@@ -1607,10 +1643,6 @@ func (parser *Parser) GetSchemaTypePath(schema *spec.Schema, depth int) []string
 	}
 
 	return []string{ANY}
-}
-
-func replaceLastTag(slice []spec.Tag, element spec.Tag) {
-	slice = append(slice[:len(slice)-1], element)
 }
 
 // defineTypeOfExample example value define the type (object and array unsupported).
