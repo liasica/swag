@@ -1540,17 +1540,20 @@ func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[st
 		schema.Extensions = make(spec.Extensions)
 	}
 	if formName := ps.FormName(); len(formName) > 0 {
-		if schema.Extensions == nil {
-			schema.Extensions = make(spec.Extensions)
-		}
-		schema.Extensions[formTag] = formName
-		if field.Tag != nil {
-			desc, ok := reflect.StructTag(strings.ReplaceAll(field.Tag.Value, "`", "")).Lookup("trans")
-			if ok && desc != "" {
-				schema.Description = desc + " " + schema.Description
-			}
-		}
 		schema.Extensions["formData"] = formName
+	}
+	if field.Tag != nil {
+		var descs []string
+		desc, _ := reflect.StructTag(strings.ReplaceAll(field.Tag.Value, "`", "")).Lookup("trans")
+		if desc != "" {
+			descs = append(descs, desc)
+		}
+
+		if schema.Description != "" {
+			descs = append(descs, schema.Description)
+		}
+
+		schema.Description = strings.Join(descs, ", ")
 	}
 	if headerName := ps.HeaderName(); len(headerName) > 0 {
 		schema.Extensions["header"] = headerName
