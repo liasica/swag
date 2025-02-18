@@ -54,7 +54,7 @@ Swag converte anotações Go para Documentação Swagger 2.0. Criámos uma varie
 ```sh
 go install github.com/liasica/swag/cmd/swag@latest
 ```
-Para construir a partir da fonte é necessário [Go](https://golang.org/dl/) (1.18 ou mais recente).
+Para construir a partir da fonte é necessário [Go](https://golang.org/dl/) (1.19 ou mais recente).
 
 Ou descarregar um binário pré-compilado a partir da [página de lançamento](https://github.com/liasica/swag/releases).
 
@@ -870,18 +870,18 @@ Cada operação API.
 // @Security ApiKeyAuth
 ```
 
-Faça-o AND condicione-o
+Faça-o OR condicione-o
 
 ```go
 // @Security ApiKeyAuth
 // @Security OAuth2Application[write, admin]
 ```
 
-Faça-o OR condição
+Faça-o AND condição
 
 ```go
-// @Security ApiKeyAuth || firebase
-// @Security OAuth2Application[write, admin] || APIKeyAuth
+// @Security ApiKeyAuth && firebase
+// @Security OAuth2Application[write, admin] && APIKeyAuth
 ```
 
 
