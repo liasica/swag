@@ -191,6 +191,7 @@ type FieldParserFactory func(ps *Parser, field *ast.Field) FieldParser
 type FieldParser interface {
 	ShouldSkip() bool
 	FieldNames() ([]string, error)
+	FirstTagValue(tag string) string
 	FormName() string
 	HeaderName() string
 	PathName() string
@@ -1643,11 +1644,8 @@ func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[st
 		tagRequired = append(tagRequired, fieldNames...)
 	}
 
-	if schema.Extensions == nil {
-		schema.Extensions = make(spec.Extensions)
-	}
 	if formName := ps.FormName(); len(formName) > 0 {
-		schema.Extensions["formData"] = formName
+		schema.AddExtension("formData", formName)
 	}
 	if field.Tag != nil {
 		var descs []string
@@ -1663,10 +1661,15 @@ func (parser *Parser) parseStructField(file *ast.File, field *ast.Field) (map[st
 		schema.Description = strings.Join(descs, ", ")
 	}
 	if headerName := ps.HeaderName(); len(headerName) > 0 {
-		schema.Extensions["header"] = headerName
+		schema.AddExtension("header", headerName)
 	}
 	if pathName := ps.PathName(); len(pathName) > 0 {
-		schema.Extensions["path"] = pathName
+		schema.AddExtension("path", pathName)
+	}
+	if len(schema.Type) > 0 && schema.Type[0] == ARRAY {
+		if collectionFormat := ps.FirstTagValue(collectionFormatTag); len(collectionFormat) > 0 {
+			schema.AddExtension(collectionFormatTag, collectionFormat)
+		}
 	}
 	fields := make(map[string]spec.Schema)
 	for _, name := range fieldNames {
