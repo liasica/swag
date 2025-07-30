@@ -541,6 +541,7 @@ type Foo struct {
 Field Name | Type | Description
 ---|:---:|---
 <a name="validate"></a>validate | `string` | 	Determines the validation for the parameter. Possible values are: `required,optional`.
+<a name="json"></a>json | `string` | JSON tag options. The `omitempty` option will mark the field as not required.
 <a name="parameterDefault"></a>default | * | Declares the value of the parameter that the server will use if none is provided, for example a "count" to control the number of results per page might default to 100 if not supplied by the client in the request. (Note: "default" has no meaning for required parameters.)  See https://tools.ietf.org/html/draft-fge-json-schema-validation-00#section-6.2. Unlike JSON Schema this value MUST conform to the defined [`type`](#parameterType) for this parameter.
 <a name="parameterMaximum"></a>maximum | `number` | See https://tools.ietf.org/html/draft-fge-json-schema-validation-00#section-5.1.2.
 <a name="parameterMinimum"></a>minimum | `number` | See https://tools.ietf.org/html/draft-fge-json-schema-validation-00#section-5.1.3.
@@ -910,6 +911,36 @@ Make it AND condition
 ```go
 // @Security ApiKeyAuth && firebase
 // @Security OAuth2Application[write, admin] && APIKeyAuth
+```
+
+### Generate enum types from enum constants
+
+You can generate enums from ordered constants. Each enum variant can have a comment, an override name, or both. This works with both iota-defined and manually defined constants.
+
+```go
+type Difficulty string
+
+const (
+	Easy   Difficulty = "easy" // You can add a comment to the enum variant.
+	Medium Difficulty = "medium" // @name MediumDifficulty
+	Hard   Difficulty = "hard" // @name HardDifficulty You can have a name override and a comment.
+)
+
+type Class int
+
+const (
+	First Class = iota // @name FirstClass
+	Second // Name override and comment rules apply here just as above.
+	Third // @name ThirdClass This one has a name override and a comment.
+)
+
+// There is no need to add `enums:"..."` to the fields, it is automatically generated from the ordered consts.
+type Quiz struct {
+	Difficulty Difficulty
+	Class Class
+	Questions []string
+	Answers []string
+}
 ```
 
 

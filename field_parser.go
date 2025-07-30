@@ -19,6 +19,7 @@ var _ FieldParser = &tagBaseFieldParser{p: nil, field: nil, tag: ""}
 const (
 	requiredLabel    = "required"
 	optionalLabel    = "optional"
+	omitEmptyLabel   = "omitempty"
 	swaggerTypeTag   = "swaggertype"
 	swaggerIgnoreTag = "swaggerignore"
 )
@@ -542,6 +543,15 @@ func (ps *tagBaseFieldParser) IsRequired() (bool, error) {
 			case requiredLabel:
 				return true, nil
 			case optionalLabel:
+				return false, nil
+			}
+		}
+	}
+
+	jsonTag := ps.tag.Get(jsonTag)
+	if jsonTag != "" {
+		for _, val := range strings.Split(jsonTag, ",") {
+			if val == omitEmptyLabel {
 				return false, nil
 			}
 		}
