@@ -770,11 +770,13 @@ func (p *Parser) ParseDefinitionV3(typeSpecDef *TypeSpecDef) (*SchemaV3, error) 
 	if len(typeSpecDef.Enums) > 0 {
 		var varNames []string
 		var enumComments = make(map[string]string)
+		var enumDescriptions = make([]string, 0, len(typeSpecDef.Enums))
 		for _, value := range typeSpecDef.Enums {
 			definition.Spec.Enum = append(definition.Spec.Enum, value.Value)
 			varNames = append(varNames, value.key)
 			if len(value.Comment) > 0 {
 				enumComments[value.key] = value.Comment
+				enumDescriptions = append(enumDescriptions, value.Comment)
 			}
 		}
 
@@ -785,6 +787,7 @@ func (p *Parser) ParseDefinitionV3(typeSpecDef *TypeSpecDef) (*SchemaV3, error) 
 		definition.Spec.Extensions[enumVarNamesExtension] = varNames
 		if len(enumComments) > 0 {
 			definition.Spec.Extensions[enumCommentsExtension] = enumComments
+			definition.Spec.Extensions[enumDescriptionsExtension] = enumDescriptions
 		}
 	}
 	schemaName := typeName

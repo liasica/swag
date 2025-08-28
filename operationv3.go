@@ -387,7 +387,18 @@ func (o *OperationV3) ParseParamComment(commentLine string, astFile *ast.File) e
 
 			for name, item := range schema.Spec.Properties {
 				prop := item.Spec
-				if len(*prop.Type) == 0 {
+
+				if prop == nil && item.Ref != nil {
+					arr := strings.Split(item.Ref.Ref, "/")
+					if len(arr) > 0 {
+						ref, ok := o.parser.openAPI.Components.Spec.Schemas[arr[len(arr)-1]]
+						if ok {
+							prop = ref.Spec
+						}
+					}
+				}
+
+				if prop == nil || len(*prop.Type) == 0 {
 					continue
 				}
 
