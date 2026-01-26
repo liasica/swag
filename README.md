@@ -4,14 +4,14 @@
 
 <img align="right" width="180px" src="https://raw.githubusercontent.com/swaggo/swag/master/assets/swaggo.png">
 
-[![Build Status](https://github.com/swaggo/swag/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/features/actions)
+[![Build Status](https://github.com/liasica/swag/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/features/actions)
 [![Coverage Status](https://img.shields.io/codecov/c/github/swaggo/swag/master.svg)](https://codecov.io/gh/swaggo/swag)
-[![Go Report Card](https://goreportcard.com/badge/github.com/swaggo/swag)](https://goreportcard.com/report/github.com/swaggo/swag)
+[![Go Report Card](https://goreportcard.com/badge/github.com/liasica/swag)](https://goreportcard.com/report/github.com/liasica/swag)
 [![codebeat badge](https://codebeat.co/badges/71e2f5e5-9e6b-405d-baf9-7cc8b5037330)](https://codebeat.co/projects/github-com-swaggo-swag-master)
-[![Go Doc](https://godoc.org/github.com/swaggo/swagg?status.svg)](https://godoc.org/github.com/swaggo/swag)
+[![Go Doc](https://godoc.org/github.com/liasica/swagg?status.svg)](https://godoc.org/github.com/liasica/swag)
 [![Backers on Open Collective](https://opencollective.com/swag/backers/badge.svg)](#backers)
 [![Sponsors on Open Collective](https://opencollective.com/swag/sponsors/badge.svg)](#sponsors) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fswaggo%2Fswag.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fswaggo%2Fswag?ref=badge_shield)
-[![Release](https://img.shields.io/github/release/swaggo/swag.svg?style=flat-square)](https://github.com/swaggo/swag/releases)
+[![Release](https://img.shields.io/github/release/swaggo/swag.svg?style=flat-square)](https://github.com/liasica/swag/releases)
 
 
 Swag converts Go annotations to Swagger Documentation 2.0. We've created a variety of plugins for popular [Go web frameworks](#supported-web-frameworks). This allows you to quickly integrate with an existing Go project (using Swagger UI).
@@ -71,7 +71,7 @@ Swag converts Go annotations to Swagger Documentation 2.0. We've created a varie
 
 2. Install swag by using:
 ```sh
-go install github.com/swaggo/swag/v2/cmd/swag@latest
+go install github.com/liasica/swag/v2/cmd/swag@latest
 ```
 To build from source you need [Go](https://golang.org/dl/) (1.19 or newer).
 
@@ -80,7 +80,7 @@ Alternatively you can run the docker image:
 docker run --rm -v $(pwd):/code ghcr.io/swaggo/swag:latest
 ```
 
-Or download a pre-compiled binary from the [release page](https://github.com/swaggo/swag/releases).
+Or download a pre-compiled binary from the [release page](https://github.com/liasica/swag/releases).
 
 3. Run `swag init` in the project's root folder which contains the `main.go` file. This will parse your comments and generate the required files (`docs` folder and `docs/docs.go`).
 ```sh
@@ -175,7 +175,7 @@ OPTIONS:
 
 ## How to use it with Gin
 
-Find the example source code [here](https://github.com/swaggo/swag/tree/master/example/celler).
+Find the example source code [here](https://github.com/liasica/swag/tree/master/example/celler).
 
 Finish the steps in [Getting started](#getting-started)
 1. After using `swag init` to generate Swagger 2.0 docs, import the following packages:
@@ -279,8 +279,8 @@ import (
     "strconv"
 
     "github.com/gin-gonic/gin"
-    "github.com/swaggo/swag/example/celler/httputil"
-    "github.com/swaggo/swag/example/celler/model"
+    "github.com/liasica/swag/example/celler/httputil"
+    "github.com/liasica/swag/example/celler/model"
 )
 
 // ShowAccount godoc
@@ -345,7 +345,7 @@ swag init
 ## The swag formatter
 
 The Swag Comments can be automatically formatted, just like 'go fmt'.
-Find the result of formatting [here](https://github.com/swaggo/swag/tree/master/example/celler).
+Find the result of formatting [here](https://github.com/liasica/swag/tree/master/example/celler).
 
 Usage:
 ```shell
@@ -404,7 +404,7 @@ func (c *Controller) ListAccounts(ctx *gin.Context) {
 ## General API Info
 
 **Example**
-[celler/main.go](https://github.com/swaggo/swag/blob/master/example/celler/main.go)
+[celler/main.go](https://github.com/liasica/swag/blob/master/example/celler/main.go)
 
 | annotation  | description                                | example                         |
 |-------------|--------------------------------------------|---------------------------------|
@@ -456,7 +456,7 @@ The following annotations are only available if you set the -v3.1 flag in the CL
 ## API Operation
 
 **Example**
-[celler/controller](https://github.com/swaggo/swag/tree/master/example/celler/controller)
+[celler/controller](https://github.com/liasica/swag/tree/master/example/celler/controller)
 
 
 | annotation           | description                                                                                                                                                                                       |
@@ -760,7 +760,7 @@ type Account struct {
 }
 ```
 
-[#708](https://github.com/swaggo/swag/issues/708) The parser handles only struct comments starting with `@Description` attribute.
+[#708](https://github.com/liasica/swag/issues/708) The parser handles only struct comments starting with `@Description` attribute.
 But it writes all struct field comments as is.
 
 So, generated swagger doc as follows:
@@ -782,7 +782,7 @@ So, generated swagger doc as follows:
 ```
 
 ### Use swaggertype tag to supported custom type
-[#201](https://github.com/swaggo/swag/issues/201#issuecomment-475479409)
+[#201](https://github.com/liasica/swag/issues/201#issuecomment-475479409)
 
 ```go
 type TimestampTime struct {
@@ -818,7 +818,7 @@ type Account struct {
 }
 ```
 
-[#379](https://github.com/swaggo/swag/issues/379)
+[#379](https://github.com/liasica/swag/issues/379)
 ```go
 type CerticateKeyPair struct {
 	Crt []byte `json:"crt" swaggertype:"string" format:"base64" example:"U3dhZ2dlciByb2Nrcw=="`
@@ -990,12 +990,12 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 	_ = web.GenericNestedResponse[types.Post]{}
 }
 ```
-See [this file](https://github.com/swaggo/swag/blob/master/testdata/generics_nested/api/api.go) for more details
+See [this file](https://github.com/liasica/swag/blob/master/testdata/generics_nested/api/api.go) for more details
 and other examples.
 
 ### Change the default Go Template action delimiters
-[#980](https://github.com/swaggo/swag/issues/980)
-[#1177](https://github.com/swaggo/swag/issues/1177)
+[#980](https://github.com/liasica/swag/issues/980)
+[#1177](https://github.com/liasica/swag/issues/1177)
 
 If your swagger annotations or struct fields contain "{{" or "}}", the template generation will most likely fail, as these are the default delimiters for [go templates](https://pkg.go.dev/text/template#Template.Delims).
 
@@ -1021,7 +1021,7 @@ This project was inspired by [yvasiyarov/swagger](https://github.com/yvasiyarov/
 ## Contributors
 
 This project exists thanks to all the people who contribute. [[Contribute](CONTRIBUTING.md)].
-<a href="https://github.com/swaggo/swag/graphs/contributors"><img src="https://opencollective.com/swag/contributors.svg?width=890&button=false" /></a>
+<a href="https://github.com/liasica/swag/graphs/contributors"><img src="https://opencollective.com/swag/contributors.svg?width=890&button=false" /></a>
 
 
 ## Backers
