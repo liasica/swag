@@ -191,11 +191,12 @@ const (
 )
 
 type Bracket struct {
-	LeftPos  int
-	RightPos int
-	Type     BracketType
+	LeftPos int
+	Type    BracketType
 }
 
+// formatGeneric adds spaces inside generic type brackets for better readability
+// TODO: remove extra spaces
 func formatGeneric(attr string, body string) string {
 	if !specialTagForSplit[strings.ToLower(attr)] {
 		return body
@@ -242,12 +243,24 @@ func formatGeneric(attr string, body string) string {
 			brackets = brackets[:lastIndex]
 
 			if lastLeftBracket.Type == BracketTypeGeneric {
-				lastLeftBracket.RightPos = i
-				// insert space after left bracket and before right bracket
-				str = replaceRange(str, lastLeftBracket.LeftPos+1, lastLeftBracket.LeftPos+1, " ")
-				str = replaceRange(str, i+1, i+1, " ")
-				i += 2
-				n += 2
+				added := 0
+
+				// if [ right character  is space
+				if lastLeftBracket.LeftPos == 0 || str[lastLeftBracket.LeftPos+1] != ' ' {
+					// insert space before left bracket
+					str = replaceRange(str, lastLeftBracket.LeftPos+1, lastLeftBracket.LeftPos+1, " ")
+					added += 1
+				}
+
+				// if ] left character is space
+				if i > 0 && str[i+added-1] != ' ' {
+					// insert space after right bracket
+					str = replaceRange(str, i+added, i+added, " ")
+					added += 1
+				}
+
+				i += added
+				n += added
 			}
 		}
 	}
