@@ -266,3 +266,51 @@ func Test_splitComment2(t *testing.T) {
 		})
 	}
 }
+
+func Test_FormatApiGeneric(t *testing.T) {
+	contents := `package api
+
+	import "net/http"
+
+	// PendingList
+	// @ID		ManagerOrderPendingList
+	// @Router	/manager/order/pending [GET]
+	// @Summary	Pending Order List
+	// @Tags	Order
+	// @Produce	json
+	// @Param	query				query		dto.OrderPendingListRequest										true	"request parameters"
+	// @Param	X-OOS-Manager-Token	header		string															true	"auth token"
+	// @Success	200					{object}	dto.Response[pagination.Result[dto.OrderPendingListResponse]]	"Success"
+	// @Success	200					{object}	dto.Response[[]string] "Success"
+	// @Success	200					{object}	dto.Response[map[string]string{}] "Success"
+	// @Success	200					{object}	map[string]string{}	"Success"
+	// @Success	200					[]string	[]string	"Success"
+	func (*OrderHandler) PendingList(c echo.Context) (err error) {}`
+
+	want := `package api
+
+	import "net/http"
+
+	// PendingList
+	// @ID		ManagerOrderPendingList
+	// @Router	/manager/order/pending [GET]
+	// @Summary	Pending Order List
+	// @Tags	Order
+	// @Produce	json
+	// @Param	query				query		dto.OrderPendingListRequest											true	"request parameters"
+	// @Param	X-OOS-Manager-Token	header		string																true	"auth token"
+	// @Success	200					{object}	dto.Response[ pagination.Result[ dto.OrderPendingListResponse ] ]	"Success"
+	// @Success	200					{object}	dto.Response[ []string ]											"Success"
+	// @Success	200					{object}	dto.Response[ map[string]string{} ]									"Success"
+	// @Success	200					{object}	map[string]string{}													"Success"
+	// @Success	200					[]string	[]string															"Success"
+	func (*OrderHandler) PendingList(c echo.Context) (err error) {}`
+
+	testFormat(t, "api.go", contents, want)
+}
+
+func TestFormatGeneric(t *testing.T) {
+	t.Log(formatGeneric("@Success", "@Success\t200\t{object}\tdto.Response[map[string]string{}]\t\"Success\""))
+	t.Log(formatGeneric("@Success", "@Success\t200\t{object}\tdto.Response[pagination.Result[map[string][]string{}]]\t\"Success\""))
+	t.Log(formatGeneric("@Success", "@Success\t200\t{object}\tdto.Response[map[string]string{}]\t\"Success\""))
+}
