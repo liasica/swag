@@ -115,6 +115,7 @@ func formatFuncDoc(fileSet *token.FileSet, commentList []*ast.Comment, edits *ed
 			formatted := "// " + attr
 			if body != "" {
 				formatted += "\t" + splitComment2(attr, body)
+				formatted = formatGeneric(attr, formatted)
 			}
 			_, _ = fmt.Fprintln(w, formatted)
 			linesToComments[len(linesToComments)] = commentIndex
@@ -179,4 +180,118 @@ func swagComment(comment string) (string, string, bool) {
 		return "", "", false
 	}
 	return matches[1], matches[2], true
+}
+
+type BracketType int
+
+const (
+	BracketTypeGeneric BracketType = iota
+	BracketTypeMap
+	BracketTypeSlice
+)
+
+type Bracket struct {
+	LeftPos  int
+	RightPos int
+	Type     BracketType
+}
+
+func formatGeneric(attr string, body string) string {
+	if !specialTagForSplit[strings.ToLower(attr)] {
+		return body
+	}
+
+	if strings.IndexByte(body, '[') == -1 && strings.IndexByte(body, ']') == -1 {
+		return body
+	}
+
+	arr := strings.Split(body, "\t")
+	if len(arr) < 4 {
+		return body
+	}
+
+	str := arr[3]
+	n := len(str)
+
+	var brackets []*Bracket
+
+	for i := 0; i < n; i++ {
+		ch := str[i]
+
+		switch ch {
+		case '[':
+			lb := &Bracket{
+				LeftPos: i,
+			}
+			if isMapLeftBracket(str, i) {
+				lb.Type = BracketTypeMap
+			} else if isSliceLeftBracket(str, i) {
+				lb.Type = BracketTypeSlice
+			} else {
+				lb.Type = BracketTypeGeneric
+			}
+			brackets = append(brackets, lb)
+		case ']':
+			// get the last left bracket and remove it from slice
+			if len(brackets) == 0 {
+				continue
+			}
+
+			lastIndex := len(brackets) - 1
+			lastLeftBracket := brackets[lastIndex]
+			brackets = brackets[:lastIndex]
+
+			if lastLeftBracket.Type == BracketTypeGeneric {
+				lastLeftBracket.RightPos = i
+				// insert space after left bracket and before right bracket
+				str = replaceRange(str, lastLeftBracket.LeftPos+1, lastLeftBracket.LeftPos+1, " ")
+				str = replaceRange(str, i+1, i+1, " ")
+				i += 2
+				n += 2
+			}
+		}
+	}
+
+	arr[3] = str
+	return strings.Join(arr, "\t")
+}
+
+func isNormalChar(ch uint8) bool {
+	return (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')
+}
+
+func isMapLeftBracket(str string, i int) bool {
+	if i < 3 {
+		return false
+	}
+
+	prevChar := str[i-1]
+
+	if prevChar == ' ' {
+		return isMapLeftBracket(str, i-1)
+	}
+
+	if !isNormalChar(prevChar) {
+		return false
+	}
+
+	if !isNormalChar(prevChar) {
+		return false
+	}
+
+	return str[i-3:i] == "map"
+}
+
+func isSliceLeftBracket(str string, i int) bool {
+	if len(str) < i+1 {
+		return false
+	}
+
+	nextChar := str[i+1]
+
+	if nextChar == ' ' {
+		return isSliceLeftBracket(str, i+1)
+	}
+
+	return nextChar == ']'
 }

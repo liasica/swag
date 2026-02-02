@@ -299,12 +299,18 @@ func Test_FormatApiGeneric(t *testing.T) {
 	// @Produce	json
 	// @Param	query				query		dto.OrderPendingListRequest											true	"request parameters"
 	// @Param	X-OOS-Manager-Token	header		string																true	"auth token"
-	// @Success	200					{object}	dto.Response[ pagination.Result [ dto.OrderPendingListResponse ] ]	"Success"
+	// @Success	200					{object}	dto.Response[ pagination.Result[ dto.OrderPendingListResponse ] ]	"Success"
 	// @Success	200					{object}	dto.Response[ []string ]											"Success"
-	// @Success	200					{object}	dto.Response[ map[string]string{} ]								"Success"
+	// @Success	200					{object}	dto.Response[ map[string]string{} ]									"Success"
 	// @Success	200					{object}	map[string]string{}													"Success"
 	// @Success	200					[]string	[]string															"Success"
 	func (*OrderHandler) PendingList(c echo.Context) (err error) {}`
 
 	testFormat(t, "api.go", contents, want)
+}
+
+func TestFormatGeneric(t *testing.T) {
+	t.Log(formatGeneric("@Success", "@Success\t200\t{object}\tdto.Response[map[string]string{}]\t\"Success\""))
+	t.Log(formatGeneric("@Success", "@Success\t200\t{object}\tdto.Response[pagination.Result[map[string][]string{}]]\t\"Success\""))
+	t.Log(formatGeneric("@Success", "@Success\t200\t{object}\tdto.Response[map[string]string{}]\t\"Success\""))
 }
