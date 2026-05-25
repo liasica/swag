@@ -111,12 +111,20 @@ func (ps *tagBaseFieldParser) FormName() string {
 	return ps.FirstTagValue(formTag)
 }
 
+func (ps *tagBaseFieldParser) QueryName() string {
+	return ps.FirstTagValue(queryTag)
+}
+
 func (ps *tagBaseFieldParser) HeaderName() string {
 	return ps.FirstTagValue(headerTag)
 }
 
 func (ps *tagBaseFieldParser) PathName() string {
 	return ps.FirstTagValue(uriTag)
+}
+
+func (ps *tagBaseFieldParser) ParamName() string {
+	return ps.FirstTagValue(paramTag)
 }
 
 func toSnakeCase(in string) string {
@@ -184,9 +192,9 @@ type structField struct {
 	minLength    *int64
 	maxItems     *int64
 	minItems     *int64
-	exampleValue interface{}
-	enums        []interface{}
-	enumVarNames []interface{}
+	exampleValue any
+	enums        []any
+	enumVarNames []any
 	unique       bool
 }
 
@@ -443,13 +451,13 @@ func (ps *tagBaseFieldParser) complementSchema(schema *spec.Schema, types []stri
 		if field.schemaType == ARRAY {
 			// Add the var names in the items schema
 			if schema.Items.Schema.Extensions == nil {
-				schema.Items.Schema.Extensions = map[string]interface{}{}
+				schema.Items.Schema.Extensions = map[string]any{}
 			}
 			schema.Items.Schema.Extensions[enumVarNamesExtension] = field.enumVarNames
 		} else {
 			// Add to top level schema
 			if schema.Extensions == nil {
-				schema.Extensions = map[string]interface{}{}
+				schema.Extensions = map[string]any{}
 			}
 			schema.Extensions[enumVarNamesExtension] = field.enumVarNames
 		}
@@ -463,7 +471,10 @@ func (ps *tagBaseFieldParser) complementSchema(schema *spec.Schema, types []stri
 		schema.MinItems = field.minItems
 		schema.UniqueItems = field.unique
 
-		eleSchema = schema.Items.Schema
+		if schema.Items != nil {
+			eleSchema = schema.Items.Schema
+		}
+
 		eleSchema.Format = field.formatType
 	}
 

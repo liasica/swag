@@ -23,7 +23,7 @@ func TestParseGlobalEnums(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, string(expected), string(b))
 
-	constsPath := "github.com/swaggo/swag/testdata/enums/consts"
+	constsPath := "github.com/liasica/swag/testdata/enums/consts"
 	assert.Equal(t, bits.UintSize, p.packages.packages[constsPath].ConstTable["uintSize"].Value)
 	assert.Equal(t, int32(62), p.packages.packages[constsPath].ConstTable["maxBase"].Value)
 	assert.Equal(t, 8, p.packages.packages[constsPath].ConstTable["shlByLen"].Value)
@@ -33,8 +33,9 @@ func TestParseGlobalEnums(t *testing.T) {
 	assert.Equal(t, "aa\nbb\u8888cc", p.packages.packages[constsPath].ConstTable["escapestr"].Value)
 	assert.Equal(t, 1_000_000, p.packages.packages[constsPath].ConstTable["underscored"].Value)
 	assert.Equal(t, 0b10001000, p.packages.packages[constsPath].ConstTable["binaryInteger"].Value)
+	assert.Equal(t, 0o755, p.packages.packages[constsPath].ConstTable["octInteger"].Value)
 
-	typesPath := "github.com/swaggo/swag/testdata/enums/types"
+	typesPath := "github.com/liasica/swag/testdata/enums/types"
 
 	difficultyEnums := p.packages.packages[typesPath].TypeDefinitions["Difficulty"].Enums
 	assert.Equal(t, "Easy", difficultyEnums[0].key)
@@ -43,6 +44,14 @@ func TestParseGlobalEnums(t *testing.T) {
 	assert.Equal(t, "This one also has a comment", difficultyEnums[1].Comment)
 	assert.Equal(t, "DifficultyHard", difficultyEnums[2].key)
 	assert.Equal(t, "This means really hard", difficultyEnums[2].Comment)
+
+	genericDifficultyEnums := p.packages.packages[typesPath].TypeDefinitions["GenericDifficulty"].Enums
+	assert.Equal(t, "GenericEasy", genericDifficultyEnums[0].key)
+	assert.Equal(t, "", genericDifficultyEnums[0].Comment)
+	assert.Equal(t, "GenericMedium", genericDifficultyEnums[1].key)
+	assert.Equal(t, "This one also has a comment", genericDifficultyEnums[1].Comment)
+	assert.Equal(t, "GenericDifficultyHard", genericDifficultyEnums[2].key)
+	assert.Equal(t, "This means really hard", genericDifficultyEnums[2].Comment)
 
 	securityLevelEnums := p.packages.packages[typesPath].TypeDefinitions["SecurityClearance"].Enums
 	assert.Equal(t, "Public", securityLevelEnums[0].key)

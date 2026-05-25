@@ -174,7 +174,7 @@ func (operation *Operation) ParseCodeSample(attribute, _, lineRemainder string) 
 			return err
 		}
 
-		var valueJSON interface{}
+		var valueJSON any
 
 		err = json.Unmarshal(data, &valueJSON)
 		if err != nil {
@@ -215,7 +215,7 @@ func (operation *Operation) ParseMetadata(attribute, lowerAttribute, lineRemaind
 			return fmt.Errorf("annotation %s need a value", attribute)
 		}
 
-		var valueJSON interface{}
+		var valueJSON any
 
 		err := json.Unmarshal([]byte(lineRemainder), &valueJSON)
 		if err != nil {
@@ -269,7 +269,7 @@ func (operation *Operation) ParseParamComment(commentLine string, astFile *ast.F
 		objectType = PRIMITIVE
 	}
 
-	var enums []interface{}
+	var enums []any
 	if !IsPrimitiveType(refType) {
 		schema, _ := operation.parser.getTypeSchema(refType, astFile, false)
 		if schema != nil && len(schema.Type) == 1 && schema.Enum != nil {
@@ -317,14 +317,25 @@ func (operation *Operation) ParseParamComment(commentLine string, astFile *ast.F
 					}
 				}
 
-				nameOverrideType := paramType
-				// query also uses formData tags
-				if paramType == "query" {
-					nameOverrideType = "formData"
-				}
 				// load overridden type specific name from extensions if exists
-				if nameVal, ok := item.Schema.Extensions.GetString(nameOverrideType); ok {
+				// query params check "query" extension first, then fall back to "formData"
+				if paramType == "query" {
+					if nameVal, ok := item.Schema.Extensions.GetString(queryTag); ok {
+						name = nameVal
+						if name == "-" {
+							continue
+						}
+					} else if nameVal, ok := item.Schema.Extensions.GetString("formData"); ok {
+						name = nameVal
+						if name == "-" {
+							continue
+						}
+					}
+				} else if nameVal, ok := item.Schema.Extensions.GetString(paramType); ok {
 					name = nameVal
+					if name == "-" {
+						continue
+					}
 				}
 
 				switch {
@@ -411,6 +422,8 @@ const (
 	jsonTag             = "json"
 	uriTag              = "uri"
 	headerTag           = "header"
+	queryTag            = "query"
+	paramTag            = "param"
 	bindingTag          = "binding"
 	defaultTag          = "default"
 	enumsTag            = "enums"
@@ -431,27 +444,27 @@ const (
 
 var regexAttributes = map[string]*regexp.Regexp{
 	// for Enums(A, B)
-	enumsTag: regexp.MustCompile(`(?i)\s+enums\(.*\)`),
+	enumsTag: regexp.MustCompile(`(?i)\s+enums\(.*?\)(?:\s|$)`),
 	// for maximum(0)
-	maximumTag: regexp.MustCompile(`(?i)\s+maxinum|maximum\(.*\)`),
+	maximumTag: regexp.MustCompile(`(?i)\s+(?:maxinum|maximum)\(.*?\)(?:\s|$)`),
 	// for minimum(0)
-	minimumTag: regexp.MustCompile(`(?i)\s+mininum|minimum\(.*\)`),
+	minimumTag: regexp.MustCompile(`(?i)\s+(?:mininum|minimum)\(.*?\)(?:\s|$)`),
 	// for default(0)
-	defaultTag: regexp.MustCompile(`(?i)\s+default\(.*\)`),
+	defaultTag: regexp.MustCompile(`(?i)\s+default\(.*?\)(?:\s|$)`),
 	// for minlength(0)
-	minLengthTag: regexp.MustCompile(`(?i)\s+minlength\(.*\)`),
+	minLengthTag: regexp.MustCompile(`(?i)\s+minlength\(.*?\)(?:\s|$)`),
 	// for maxlength(0)
-	maxLengthTag: regexp.MustCompile(`(?i)\s+maxlength\(.*\)`),
+	maxLengthTag: regexp.MustCompile(`(?i)\s+maxlength\(.*?\)(?:\s|$)`),
 	// for format(email)
-	formatTag: regexp.MustCompile(`(?i)\s+format\(.*\)`),
+	formatTag: regexp.MustCompile(`(?i)\s+format\(.*?\)(?:\s|$)`),
 	// for extensions(x-example=test)
-	extensionsTag: regexp.MustCompile(`(?i)\s+extensions\(.*\)`),
+	extensionsTag: regexp.MustCompile(`(?i)\s+extensions\(.*?\)(?:\s|$)`),
 	// for collectionFormat(csv)
-	collectionFormatTag: regexp.MustCompile(`(?i)\s+collectionFormat\(.*\)`),
+	collectionFormatTag: regexp.MustCompile(`(?i)\s+collectionFormat\(.*?\)(?:\s|$)`),
 	// example(0)
-	exampleTag: regexp.MustCompile(`(?i)\s+example\(.*\)`),
+	exampleTag: regexp.MustCompile(`(?i)\s+example\(.*?\)(?:\s|$)`),
 	// schemaExample(0)
-	schemaExampleTag: regexp.MustCompile(`(?i)\s+schemaExample\(.*\)`),
+	schemaExampleTag: regexp.MustCompile(`(?i)\s+schemaExample\(.*?\)(?:\s|$)`),
 }
 
 func (operation *Operation) parseParamAttribute(comment, objectType, schemaType, paramType string, param *spec.Parameter) error {
@@ -495,7 +508,7 @@ func (operation *Operation) parseParamAttribute(comment, objectType, schemaType,
 func findAttr(re *regexp.Regexp, commentLine string) (string, error) {
 	attr := re.FindString(commentLine)
 
-	l, r := strings.Index(attr, "("), strings.Index(attr, ")")
+	l, r := strings.Index(attr, "("), strings.LastIndex(attr, ")")
 	if l == -1 || r == -1 {
 		return "", fmt.Errorf("can not find regex=%s, comment=%s", re.String(), commentLine)
 	}
@@ -646,7 +659,7 @@ func setExample(param *spec.Parameter, schemaType string, value string) error {
 }
 
 // defineType enum value define the type (object and array unsupported).
-func defineType(schemaType string, value string) (v interface{}, err error) {
+func defineType(schemaType string, value string) (v any, err error) {
 	schemaType = TransToValidSchemeType(schemaType)
 
 	switch schemaType {
@@ -713,7 +726,7 @@ func parseMimeTypeList(mimeTypeList string, typeList *[]string, format string) e
 	return nil
 }
 
-var routerPattern = regexp.MustCompile(`^(/[\w./\-{}\(\)+:$~]*)[[:blank:]]+\[(\w+)]`)
+var routerPattern = regexp.MustCompile(`^(/[\w./\-{}\(\)+:$~@]*)[[:blank:]]+\[(\w+)]`)
 
 // ParseRouterComment parses comment for given `router` comment string.
 func (operation *Operation) ParseRouterComment(commentLine string, deprecated bool) error {
@@ -1186,7 +1199,7 @@ func (operation *Operation) AddResponse(code int, response *spec.Response) {
 }
 
 // createParameter returns swagger spec.Parameter for given  paramType, description, paramName, schemaType, required.
-func createParameter(paramType, description, paramName, objectType, schemaType string, format string, required bool, enums []interface{}, collectionFormat string) spec.Parameter {
+func createParameter(paramType, description, paramName, objectType, schemaType string, format string, required bool, enums []any, collectionFormat string) spec.Parameter {
 	// //five possible parameter types. 	query, path, body, header, form
 	result := spec.Parameter{
 		ParamProps: spec.ParamProps{

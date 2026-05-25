@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/swaggo/swag/testdata/description_escape_new_line/api"
+	"github.com/liasica/swag/testdata/description_escape_new_line/api"
 )
 
 // @title Swagger Example API

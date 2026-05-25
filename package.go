@@ -5,7 +5,8 @@ import (
 	"go/token"
 	"reflect"
 	"strconv"
-	"strings"
+
+	"golang.org/x/tools/go/packages"
 )
 
 // PackageDefinitions files and definition in a package.
@@ -27,12 +28,14 @@ type PackageDefinitions struct {
 
 	// package path
 	Path string
+
+	Package *packages.Package
 }
 
 // ConstVariableGlobalEvaluator an interface used to evaluate enums across packages
 type ConstVariableGlobalEvaluator interface {
-	EvaluateConstValue(pkg *PackageDefinitions, cv *ConstVariable, recursiveStack map[string]struct{}) (interface{}, ast.Expr)
-	EvaluateConstValueByName(file *ast.File, pkgPath, constVariableName string, recursiveStack map[string]struct{}) (interface{}, ast.Expr)
+	EvaluateConstValue(pkg *PackageDefinitions, cv *ConstVariable, recursiveStack map[string]struct{}) (any, ast.Expr)
+	EvaluateConstValueByName(file *ast.File, pkgPath, constVariableName string, recursiveStack map[string]struct{}) (any, ast.Expr)
 	FindTypeSpec(typeName string, file *ast.File) *TypeSpecDef
 }
 
@@ -80,7 +83,7 @@ func (pkg *PackageDefinitions) AddConst(astFile *ast.File, valueSpec *ast.ValueS
 	return pkg
 }
 
-func (pkg *PackageDefinitions) evaluateConstValue(file *ast.File, iota int, expr ast.Expr, globalEvaluator ConstVariableGlobalEvaluator, recursiveStack map[string]struct{}) (interface{}, ast.Expr) {
+func (pkg *PackageDefinitions) evaluateConstValue(file *ast.File, iota int, expr ast.Expr, globalEvaluator ConstVariableGlobalEvaluator, recursiveStack map[string]struct{}) (any, ast.Expr) {
 	switch valueExpr := expr.(type) {
 	case *ast.Ident:
 		if valueExpr.Name == "iota" {
@@ -100,36 +103,10 @@ func (pkg *PackageDefinitions) evaluateConstValue(file *ast.File, iota int, expr
 	case *ast.BasicLit:
 		switch valueExpr.Kind {
 		case token.INT:
-			// handle underscored number, such as 1_000_000
-			if strings.ContainsRune(valueExpr.Value, '_') {
-				valueExpr.Value = strings.Replace(valueExpr.Value, "_", "", -1)
-			}
-			if len(valueExpr.Value) >= 2 && valueExpr.Value[0] == '0' {
-				var start, base = 2, 8
-				switch valueExpr.Value[1] {
-				case 'x', 'X':
-					//hex
-					base = 16
-				case 'b', 'B':
-					//binary
-					base = 2
-				default:
-					//octet
-					start = 1
-				}
-				if x, err := strconv.ParseInt(valueExpr.Value[start:], base, 64); err == nil {
-					return int(x), nil
-				} else if x, err := strconv.ParseUint(valueExpr.Value[start:], base, 64); err == nil {
-					return x, nil
-				} else {
-					panic(err)
-				}
-			}
-
 			//a basic literal integer is int type in default, or must have an explicit converting type in front
-			if x, err := strconv.ParseInt(valueExpr.Value, 10, 64); err == nil {
+			if x, err := strconv.ParseInt(valueExpr.Value, 0, 64); err == nil {
 				return int(x), nil
-			} else if x, err := strconv.ParseUint(valueExpr.Value, 10, 64); err == nil {
+			} else if x, err := strconv.ParseUint(valueExpr.Value, 0, 64); err == nil {
 				return x, nil
 			} else {
 				panic(err)
