@@ -1319,11 +1319,33 @@ func TestParseParamCommentByFormDataTypeV3(t *testing.T) {
 	requestBody := operation.RequestBody
 	assert.True(t, requestBody.Spec.Spec.Required)
 	assert.Equal(t, "this is a test file", requestBody.Spec.Spec.Description)
-	assert.NotNil(t, requestBody)
 
 	requestBodySpec := requestBody.Spec.Spec
 	assert.NotNil(t, requestBodySpec)
-	assert.Equal(t, &typeFile, requestBodySpec.Content["application/x-www-form-urlencoded"].Spec.Schema.Spec.Type)
+
+	media := requestBodySpec.Content["multipart/form-data"]
+	if assert.NotNil(t, media) {
+		if assert.NotNil(t, media.Spec.Schema) && assert.NotNil(t, media.Spec.Schema.Spec) {
+			assert.Equal(
+				t,
+				&spec.SingleOrArray[string]{OBJECT},
+				media.Spec.Schema.Spec.Type,
+			)
+
+			prop := media.Spec.Schema.Spec.Properties["file"]
+			if assert.NotNil(t, prop) && assert.NotNil(t, prop.Spec) {
+				assert.Equal(
+					t,
+					&spec.SingleOrArray[string]{STRING},
+					prop.Spec.Type,
+				)
+				assert.Equal(t, "binary", prop.Spec.Format)
+				assert.Equal(t, "this is a test file", prop.Spec.Description)
+			}
+
+			assert.Contains(t, media.Spec.Schema.Spec.Required, "file")
+		}
+	}
 }
 
 func TestParseParamCommentByFormDataTypeUint64V3(t *testing.T) {
@@ -1343,7 +1365,144 @@ func TestParseParamCommentByFormDataTypeUint64V3(t *testing.T) {
 
 	requestBodySpec := requestBody.Spec.Spec.Content["application/x-www-form-urlencoded"].Spec
 	assert.NotNil(t, requestBodySpec)
-	assert.Equal(t, &typeInteger, requestBodySpec.Schema.Spec.Type)
+	assert.Equal(t, &typeObject, requestBodySpec.Schema.Spec.Type)
+
+	prop := requestBodySpec.Schema.Spec.Properties["file"]
+	if assert.NotNil(t, prop) && assert.NotNil(t, prop.Spec) {
+		assert.Equal(t, &typeInteger, prop.Spec.Type)
+	}
+
+	assert.Contains(t, requestBodySpec.Schema.Spec.Required, "file")
+}
+
+func TestParseParamCommentByFormDataTypeFileArrayV3(t *testing.T) {
+	t.Parallel()
+
+	comment := `@Param files formData []file true "multiple files"`
+	operation := NewOperationV3(New())
+
+	err := operation.ParseComment(comment, nil)
+	require.NoError(t, err)
+
+	assert.Len(t, operation.Parameters, 0)
+
+	requestBody := operation.RequestBody
+	require.NotNil(t, requestBody)
+	assert.Equal(t, "multiple files", requestBody.Spec.Spec.Description)
+
+	media := requestBody.Spec.Spec.Content["multipart/form-data"]
+	require.NotNil(t, media)
+	require.NotNil(t, media.Spec.Schema)
+	require.NotNil(t, media.Spec.Schema.Spec)
+
+	prop := media.Spec.Schema.Spec.Properties["files"]
+	require.NotNil(t, prop)
+	require.NotNil(t, prop.Spec)
+	assert.Equal(t, &typeArray, prop.Spec.Type)
+
+	require.NotNil(t, prop.Spec.Items)
+	require.NotNil(t, prop.Spec.Items.Schema)
+	require.NotNil(t, prop.Spec.Items.Schema.Spec)
+	assert.Equal(t, &typeString, prop.Spec.Items.Schema.Spec.Type)
+	assert.Equal(t, "binary", prop.Spec.Items.Schema.Spec.Format)
+
+	assert.Contains(t, media.Spec.Schema.Spec.Required, "files")
+}
+
+func TestParseParamCommentByFormDataMultipleParamsMultipartV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(New())
+
+	comments := []string{
+		`@Accept multipart/form-data`,
+		`@Param zip formData file true "Zip file containing checks.toml, users.toml, and/or settings.toml"`,
+		`@Param destructiveChecks formData boolean false "If true, destructively replace existing checks during checks.toml import"`,
+		`@Param destructiveUsers formData boolean false "If true, destructively replace existing users during users.toml import"`,
+		`@Param destructiveSettings formData boolean false "If true, destructively replace existing settings during settings.toml import"`,
+	}
+
+	for _, comment := range comments {
+		err := operation.ParseComment(comment, nil)
+		require.NoError(t, err)
+	}
+
+	requestBody := operation.RequestBody
+	require.NotNil(t, requestBody)
+
+	media := requestBody.Spec.Spec.Content["multipart/form-data"]
+	require.NotNil(t, media)
+	require.NotNil(t, media.Spec.Schema)
+	require.NotNil(t, media.Spec.Schema.Spec)
+
+	schema := media.Spec.Schema.Spec
+	assert.Equal(t, &typeObject, schema.Type)
+	assert.Nil(t, schema.OneOf, "multiple formData params must not be bundled into oneOf")
+	assert.Len(t, schema.Properties, 4)
+
+	zip := schema.Properties["zip"]
+	if assert.NotNil(t, zip) && assert.NotNil(t, zip.Spec) {
+		assert.Equal(t, &typeString, zip.Spec.Type)
+		assert.Equal(t, "binary", zip.Spec.Format)
+	}
+
+	for _, name := range []string{"destructiveChecks", "destructiveUsers", "destructiveSettings"} {
+		prop := schema.Properties[name]
+		if assert.NotNil(t, prop) && assert.NotNil(t, prop.Spec) {
+			assert.Equal(t, &spec.SingleOrArray[string]{BOOLEAN}, prop.Spec.Type)
+		}
+	}
+
+	assert.ElementsMatch(t, []string{"zip"}, schema.Required)
+}
+
+func TestParseParamCommentByFormDataMultipleParamsURLEncodedV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(New())
+
+	comments := []string{
+		`@Accept application/x-www-form-urlencoded`,
+		`@Param id formData int true "Check ID to update"`,
+		`@Param name formData string false "Update check name"`,
+		`@Param weight formData int false "Update check weight"`,
+		`@Param activated formData boolean false "Update check activation"`,
+	}
+
+	for _, comment := range comments {
+		err := operation.ParseComment(comment, nil)
+		require.NoError(t, err)
+	}
+
+	requestBody := operation.RequestBody
+	require.NotNil(t, requestBody)
+
+	media := requestBody.Spec.Spec.Content["application/x-www-form-urlencoded"]
+	require.NotNil(t, media)
+	require.NotNil(t, media.Spec.Schema)
+	require.NotNil(t, media.Spec.Schema.Spec)
+
+	schema := media.Spec.Schema.Spec
+	assert.Equal(t, &typeObject, schema.Type)
+	assert.Nil(t, schema.OneOf, "multiple formData params must not be bundled into oneOf")
+	assert.Len(t, schema.Properties, 4)
+
+	id := schema.Properties["id"]
+	if assert.NotNil(t, id) && assert.NotNil(t, id.Spec) {
+		assert.Equal(t, &typeInteger, id.Spec.Type)
+	}
+
+	name := schema.Properties["name"]
+	if assert.NotNil(t, name) && assert.NotNil(t, name.Spec) {
+		assert.Equal(t, &typeString, name.Spec.Type)
+	}
+
+	activated := schema.Properties["activated"]
+	if assert.NotNil(t, activated) && assert.NotNil(t, activated.Spec) {
+		assert.Equal(t, &spec.SingleOrArray[string]{BOOLEAN}, activated.Spec.Type)
+	}
+
+	assert.ElementsMatch(t, []string{"id"}, schema.Required)
 }
 
 func TestParseParamCommentByNotSupportedTypeV3(t *testing.T) {
