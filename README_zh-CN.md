@@ -11,19 +11,13 @@
 ## 安装
 
 ```sh
-go install github.com/liasica/swag/v2/cmd/swag@latest
+curl -sSfL https://raw.githubusercontent.com/liasica/swag/v2-adaptation/install.sh | bash
 ```
 
-指定版本：
+脚本从最新发布中下载与当前平台匹配的二进制，用 `checksums.txt` 校验后安装到 `/usr/local/bin`。`SWAG_VERSION` 指定版本，`SWAG_BIN_DIR` 指定安装目录：
 
 ```sh
-go install github.com/liasica/swag/v2/cmd/swag@v2.0.0-rc5-e73d748-adaptation
-```
-
-不安装直接运行：
-
-```sh
-go run -mod=mod github.com/liasica/swag/v2/cmd/swag@latest init
+curl -sSfL https://raw.githubusercontent.com/liasica/swag/v2-adaptation/install.sh | SWAG_VERSION=v2.0.0-rc5-e73d748-adaptation SWAG_BIN_DIR=~/.local/bin bash
 ```
 
 容器镜像：
@@ -32,7 +26,14 @@ go run -mod=mod github.com/liasica/swag/v2/cmd/swag@latest init
 docker run --rm -v $(pwd):/code ghcr.io/liasica/swag:latest init
 ```
 
-Linux 与 macOS（amd64、arm64）的预编译二进制挂在每个[发布](https://github.com/liasica/swag/releases)上。
+走 Go 工具链：
+
+```sh
+go install github.com/liasica/swag/v2/cmd/swag@latest
+go run -mod=mod github.com/liasica/swag/v2/cmd/swag@latest init
+```
+
+Linux 与 macOS（amd64、arm64）的二进制挂在每个[发布](https://github.com/liasica/swag/releases)上。
 
 ## 相对上游的改动
 

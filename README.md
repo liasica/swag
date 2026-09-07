@@ -11,19 +11,13 @@ Annotation syntax and CLI reference live in the [upstream documentation](https:/
 ## Install
 
 ```sh
-go install github.com/liasica/swag/v2/cmd/swag@latest
+curl -sSfL https://raw.githubusercontent.com/liasica/swag/v2-adaptation/install.sh | bash
 ```
 
-Pin a release:
+The script downloads the binary matching your platform from the latest release, verifies it against `checksums.txt` and installs it into `/usr/local/bin`. `SWAG_VERSION` picks a release, `SWAG_BIN_DIR` picks the target directory:
 
 ```sh
-go install github.com/liasica/swag/v2/cmd/swag@v2.0.0-rc5-e73d748-adaptation
-```
-
-Run without installing:
-
-```sh
-go run -mod=mod github.com/liasica/swag/v2/cmd/swag@latest init
+curl -sSfL https://raw.githubusercontent.com/liasica/swag/v2-adaptation/install.sh | SWAG_VERSION=v2.0.0-rc5-e73d748-adaptation SWAG_BIN_DIR=~/.local/bin bash
 ```
 
 Container image:
@@ -32,7 +26,14 @@ Container image:
 docker run --rm -v $(pwd):/code ghcr.io/liasica/swag:latest init
 ```
 
-Pre-built binaries for Linux and macOS (amd64, arm64) are attached to each [release](https://github.com/liasica/swag/releases).
+Through the Go toolchain:
+
+```sh
+go install github.com/liasica/swag/v2/cmd/swag@latest
+go run -mod=mod github.com/liasica/swag/v2/cmd/swag@latest init
+```
+
+Binaries for Linux and macOS (amd64, arm64) are attached to each [release](https://github.com/liasica/swag/releases).
 
 ## Changes against upstream
 
