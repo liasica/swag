@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 
-# Find and replace github.com/swaggo/swag with github.com/liasica/swag in all files
+# 把上游模块路径替换为本 fork 的模块路径
+# 同时处理两种形态：
+#   1. import 路径 github.com/swaggo/swag
+#   2. 生成的定义名 github_com_swaggo_swag（点号被 swag 转成下划线）
 
 set -e
 
 OLD_MODULE="github.com/swaggo/swag"
 NEW_MODULE="github.com/liasica/swag"
+OLD_DEFINITION="github_com_swaggo_swag"
+NEW_DEFINITION="github_com_liasica_swag"
 
-echo "Starting to replace ${OLD_MODULE} with ${NEW_MODULE}..."
+echo "Replacing ${OLD_MODULE} -> ${NEW_MODULE}"
+echo "Replacing ${OLD_DEFINITION} -> ${NEW_DEFINITION}"
 echo ""
 
-# Find all files containing the target string (all text files)
-echo "Searching for files containing '${OLD_MODULE}'..."
-files=$(grep -rl "${OLD_MODULE}" . \
+files=$(grep -rlE "${OLD_MODULE}|${OLD_DEFINITION}" . \
     --exclude-dir=.git \
     --exclude-dir=vendor \
     --exclude-dir=node_modules \
@@ -21,25 +25,30 @@ files=$(grep -rl "${OLD_MODULE}" . \
     2>/dev/null || true)
 
 if [ -z "$files" ]; then
-    echo "No files containing '${OLD_MODULE}' found"
+    echo "Nothing to replace"
     exit 0
 fi
 
-echo "Found the following files:"
+echo "Files to update:"
 echo "$files"
 echo ""
-echo "Starting replacement..."
 
-# Replace all files at once
-echo "$files" | xargs sed -i '' "s|${OLD_MODULE}|${NEW_MODULE}|g"
+echo "$files" | xargs sed -i '' \
+    -e "s|${OLD_MODULE}|${NEW_MODULE}|g" \
+    -e "s|${OLD_DEFINITION}|${NEW_DEFINITION}|g"
+
+# 替换后 import 分组内的字母序会被打乱，重新格式化
+echo ""
+echo "Running gofmt..."
+unformatted=$(gofmt -l . 2>/dev/null || true)
+if [ -n "$unformatted" ]; then
+    echo "$unformatted" | xargs gofmt -w
+    echo "$unformatted"
+fi
 
 echo ""
-echo "✅ Replacement completed!"
+echo "Done. Affected files: $(echo "$files" | wc -l | tr -d ' ')"
 echo ""
-echo "📝 Number of affected files: $(echo "$files" | wc -l | tr -d ' ')"
-echo ""
-echo "🔧 Please run the following command to update dependencies:"
+echo "Next steps:"
 echo "  go mod tidy"
-echo ""
-echo "📦 If you have subprojects, go to the subproject directory and run:"
-echo "  cd example/celler && go mod tidy"
+echo "  for d in example/*/; do (cd \"\$d\" && go mod tidy); done"

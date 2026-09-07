@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
-	"github.com/shopspring/decimal"
 	"github.com/liasica/swag/v2/testdata/v3/simple/cross"
+	"github.com/shopspring/decimal"
 )
 
 type Pet struct {

@@ -14,9 +14,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liasica/swag/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/liasica/swag/v2"
 )
 
 const searchDir = "../testdata/simple"
