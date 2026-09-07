@@ -22,7 +22,10 @@ ENV GOARCH=$TARGETARCH \
     GOOS=$TARGETOS
 
 # Build the Go app
-RUN CGO_ENABLED=0 GOOS=linux go build -v -a -installsuffix cgo -o swag cmd/swag/main.go
+ARG VERSION
+RUN CGO_ENABLED=0 GOOS=linux go build -v -a -installsuffix cgo \
+    -ldflags "-s -w${VERSION:+ -X github.com/liasica/swag/v2.Version=$VERSION}" \
+    -o swag cmd/swag/main.go
 
 
 ######## Start a new stage from scratch #######
