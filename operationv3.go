@@ -39,7 +39,7 @@ const (
 )
 
 // OperationV3 describes a single API operation on a path.
-// For more information: https://github.com/swaggo/swag#api-operation
+// For more information: https://github.com/liasica/swag#api-operation
 type OperationV3 struct {
 	parser              *Parser
 	codeExampleFilesDir string

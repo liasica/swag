@@ -1,4 +1,4 @@
-module github.com/swaggo/swag/v2
+module github.com/liasica/swag/v2
 
 go 1.18
 

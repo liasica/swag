@@ -2177,9 +2177,9 @@ func TestParseTypeOverrides(t *testing.T) {
 
 	searchDir := "testdata/global_override"
 	p := New(SetOverrides(map[string]string{
-		"github.com/swaggo/swag/v2/testdata/global_override/types.Application":  "string",
-		"github.com/swaggo/swag/v2/testdata/global_override/types.Application2": "github.com/swaggo/swag/v2/testdata/global_override/othertypes.Application",
-		"github.com/swaggo/swag/v2/testdata/global_override/types.ShouldSkip":   "",
+		"github.com/liasica/swag/v2/testdata/global_override/types.Application":  "string",
+		"github.com/liasica/swag/v2/testdata/global_override/types.Application2": "github.com/liasica/swag/v2/testdata/global_override/othertypes.Application",
+		"github.com/liasica/swag/v2/testdata/global_override/types.ShouldSkip":   "",
 	}))
 	err := p.ParseAPI(searchDir, mainAPIFile, defaultParseDepth)
 	assert.NoError(t, err)
@@ -4288,21 +4288,21 @@ func TestParser_skipPackageByPrefix(t *testing.T) {
 
 	parser := New()
 
-	assert.False(t, parser.skipPackageByPrefix("github.com/swaggo/swag"))
-	assert.False(t, parser.skipPackageByPrefix("github.com/swaggo/swag/cmd"))
-	assert.False(t, parser.skipPackageByPrefix("github.com/swaggo/swag/gen"))
+	assert.False(t, parser.skipPackageByPrefix("github.com/liasica/swag"))
+	assert.False(t, parser.skipPackageByPrefix("github.com/liasica/swag/cmd"))
+	assert.False(t, parser.skipPackageByPrefix("github.com/liasica/swag/gen"))
 
-	parser = New(SetPackagePrefix("github.com/swaggo/swag/cmd"))
+	parser = New(SetPackagePrefix("github.com/liasica/swag/cmd"))
 
-	assert.True(t, parser.skipPackageByPrefix("github.com/swaggo/swag"))
-	assert.False(t, parser.skipPackageByPrefix("github.com/swaggo/swag/cmd"))
-	assert.True(t, parser.skipPackageByPrefix("github.com/swaggo/swag/gen"))
+	assert.True(t, parser.skipPackageByPrefix("github.com/liasica/swag"))
+	assert.False(t, parser.skipPackageByPrefix("github.com/liasica/swag/cmd"))
+	assert.True(t, parser.skipPackageByPrefix("github.com/liasica/swag/gen"))
 
-	parser = New(SetPackagePrefix("github.com/swaggo/swag/cmd,github.com/swaggo/swag/gen"))
+	parser = New(SetPackagePrefix("github.com/liasica/swag/cmd,github.com/liasica/swag/gen"))
 
-	assert.True(t, parser.skipPackageByPrefix("github.com/swaggo/swag"))
-	assert.False(t, parser.skipPackageByPrefix("github.com/swaggo/swag/cmd"))
-	assert.False(t, parser.skipPackageByPrefix("github.com/swaggo/swag/gen"))
+	assert.True(t, parser.skipPackageByPrefix("github.com/liasica/swag"))
+	assert.False(t, parser.skipPackageByPrefix("github.com/liasica/swag/cmd"))
+	assert.False(t, parser.skipPackageByPrefix("github.com/liasica/swag/gen"))
 }
 
 func TestParser_ParseRouterApiInFuncBody(t *testing.T) {
