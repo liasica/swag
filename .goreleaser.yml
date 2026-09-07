@@ -1,17 +1,21 @@
-build:
-  main: cmd/swag/main.go
-  goos:
-    - linux
-    - darwin
-  goarch:
-    - amd64
-    - arm64
-    - 386
-  env:
-    - CGO_ENABLED=0
+version: 2
+
+builds:
+  - main: cmd/swag/main.go
+    binary: swag
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/liasica/swag/v2.Version={{ .Tag }}
 
 archives:
-  - id: foo
+  - id: swag
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
@@ -20,11 +24,17 @@ archives:
 
 checksum:
   name_template: 'checksums.txt'
+
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: '{{ .Tag }}-next'
+
+release:
+  # 标签带 -adaptation 后缀会被 semver 识别为预发布，这里强制按正式版发布，保证 releases/latest 可用
+  prerelease: false
+
 changelog:
   sort: asc
   filters:
     exclude:
-    - '^docs:'
-    - '^test:'
+      - '^docs:'
+      - '^test:'

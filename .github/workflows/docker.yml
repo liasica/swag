@@ -1,4 +1,4 @@
-name: docker
+name: Docker
 
 on:
   push:
@@ -10,40 +10,40 @@ permissions:
   packages: write
 
 jobs:
-  docker-build:
+  docker:
+    name: Build and push image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
-      - name: Login to Github Packages
-        uses: docker/login-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker meta
+      - name: Extract image metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/swaggo/swag
+          images: ghcr.io/${{ github.repository }}
 
-      - name: Build image and push to GitHub Container Registry
-        id: docker_build
-        uses: docker/build-push-action@v5
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{github.ref_name}}
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+      - name: Report image digest
+        run: echo "${{ steps.build.outputs.digest }}"
