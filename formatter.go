@@ -87,10 +87,14 @@ func (edits edits) apply(contents []byte) []byte {
 		return edits[i].begin > edits[j].begin
 	})
 
+	// 每次编辑都写入新分配的切片，避免就地改写调用方传入的 `contents`
+	// 否则替换不需要扩容时，调用方无法通过比较内容判断文件是否有改动
 	for _, edit := range edits {
-		prefix := contents[:edit.begin]
-		suffix := contents[edit.end:]
-		contents = append(prefix, append(edit.replacement, suffix...)...)
+		result := make([]byte, 0, len(contents)-(edit.end-edit.begin)+len(edit.replacement))
+		result = append(result, contents[:edit.begin]...)
+		result = append(result, edit.replacement...)
+		result = append(result, contents[edit.end:]...)
+		contents = result
 	}
 
 	return contents
